@@ -28,11 +28,18 @@ function todayDate() {
 }
 
 function addMonths(dateString, months) {
+  if (!dateString) return null;
   const date = new Date(`${dateString}T00:00:00`);
   const day = date.getDate();
   date.setMonth(date.getMonth() + months);
   if (date.getDate() !== day) date.setDate(0);
   return date.toISOString().slice(0, 10);
+}
+
+function updateNextMaintenancePreview() {
+  const lastMaintenance = $('#last_maintenance').value;
+  const frequency = Number($('#frequency_months').value || 6);
+  $('#next_maintenance').value = lastMaintenance ? addMonths(lastMaintenance, frequency) : '';
 }
 
 function statusFor(item) {
@@ -284,24 +291,27 @@ function openEquipment(id = null) {
   $('#location').value = item?.location || '';
   $('#area').value = item?.area || 'UCI';
   $('#last_maintenance').value = item?.last_maintenance || '';
-  $('#next_maintenance').value = item?.next_maintenance || '';
   $('#frequency_months').value = item?.frequency_months || 6;
+  $('#next_maintenance').value = item?.next_maintenance || '';
   $('#pending_intervention').checked = Boolean(item?.pending_intervention);
+  updateNextMaintenancePreview();
   $('#deleteEquipment').style.visibility = item ? 'visible' : 'hidden';
   $('#completeMaintenance').style.visibility = item ? 'visible' : 'hidden';
   $('#equipmentDialog').showModal();
 }
 
 function formPayload() {
+  const lastMaintenance = $('#last_maintenance').value || null;
+  const frequency = Number($('#frequency_months').value);
   return {
     name: $('#name').value.trim(),
     plate: $('#plate').value.trim(),
     serial_number: $('#serial_number').value.trim(),
     location: $('#location').value.trim(),
     area: $('#area').value,
-    last_maintenance: $('#last_maintenance').value || null,
-    next_maintenance: $('#next_maintenance').value || null,
-    frequency_months: Number($('#frequency_months').value),
+    last_maintenance: lastMaintenance,
+    next_maintenance: lastMaintenance ? addMonths(lastMaintenance, frequency) : null,
+    frequency_months: frequency,
     pending_intervention: $('#pending_intervention').checked,
   };
 }
@@ -355,14 +365,16 @@ function normalizeRow(row) {
     lookup[String(key).trim().toLowerCase()] = row[key];
   });
   const frequencyRaw = String(lookup.frecuencia || lookup.frequency_months || '6').toLowerCase();
+  const lastMaintenance = lookup['ultimo mantenimiento'] || lookup['último mantenimiento'] || lookup.last_maintenance || null;
+  const nextMaintenance = lookup['proximo mantenimiento'] || lookup['próximo mantenimiento'] || lookup.next_maintenance || null;
   return {
     name: String(lookup['nombre del equipo'] || lookup.nombre || lookup.equipo || '').trim(),
     plate: String(lookup.placa || '').trim(),
     serial_number: String(lookup['número de serie'] || lookup['numero de serie'] || lookup.serial || '').trim(),
     location: String(lookup['ubicación'] || lookup.ubicacion || '').trim(),
     area: normalizeArea(lookup['área'] || lookup.area || ''),
-    last_maintenance: lookup['ultimo mantenimiento'] || lookup['último mantenimiento'] || lookup.last_maintenance || null,
-    next_maintenance: lookup['proximo mantenimiento'] || lookup['próximo mantenimiento'] || lookup.next_maintenance || null,
+    last_maintenance: lastMaintenance,
+    next_maintenance: nextMaintenance || (lastMaintenance ? addMonths(lastMaintenance, frequencyRaw.includes('12') || frequencyRaw.includes('anual') ? 12 : 6) : null),
     frequency_months: frequencyRaw.includes('12') || frequencyRaw.includes('anual') ? 12 : 6,
     pending_intervention: false,
   };
@@ -477,6 +489,8 @@ function wireEvents() {
   });
   $('#newEquipment').addEventListener('click', () => openEquipment());
   $('#closeDialog').addEventListener('click', () => $('#equipmentDialog').close());
+  $('#last_maintenance').addEventListener('change', updateNextMaintenancePreview);
+  $('#frequency_months').addEventListener('change', updateNextMaintenancePreview);
   $('#equipmentForm').addEventListener('submit', saveForm);
   $('#deleteEquipment').addEventListener('click', async () => {
     const id = $('#equipmentId').value;
