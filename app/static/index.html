@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestión Biomédica</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <form id="loginForm" class="login-box">
+      <div class="brand login-brand">
+        <span class="brand-mark">BM</span>
+        <div>
+          <strong>Gestión Biomédica</strong>
+          <small>Acceso seguro</small>
+        </div>
+      </div>
+      <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="email" required></label>
+      <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Ingresar</button>
+      <p id="loginError" class="form-message"></p>
+      <p class="login-note">El administrador crea los usuarios desde Supabase Auth.</p>
+    </form>
+  </section>
+
+  <aside class="sidebar app-shell">
+    <div class="brand">
+      <span class="brand-mark">BM</span>
+      <div>
+        <strong>Gestión Biomédica</strong>
+        <small>Mantenimientos preventivos</small>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+      <button class="nav-btn" data-view="equipos">Equipos</button>
+      <button class="nav-btn" data-view="calendario">Calendario</button>
+      <button class="nav-btn" data-view="datos">Datos</button>
+    </nav>
+    <div class="area-filter">
+      <span>Áreas</span>
+      <button class="active" data-area="">Todas</button>
+      <button data-area="UCI">UCI</button>
+      <button data-area="Urgencias">Urgencias</button>
+      <button data-area="Cirugia">Cirugía</button>
+    </div>
+  </aside>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <p id="pageSubtitle">Seguimiento automático de mantenimientos preventivos.</p>
+      </div>
+      <div class="actions">
+        <button id="exportExcel" class="secondary">Exportar Excel</button>
+        <button id="exportPdf" class="secondary">Exportar PDF</button>
+        <button id="newEquipment">Nuevo equipo</button>
+        <button id="logoutBtn" class="secondary">Salir</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="view active">
+      <div class="kpi-grid">
+        <article class="kpi"><span>Total equipos</span><strong id="kpiEquipment">0</strong></article>
+        <article class="kpi"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
+        <article class="kpi yellow"><span>Próximos</span><strong id="kpiDueSoon">0</strong></article>
+        <article class="kpi red"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
+        <article class="kpi green"><span>Realizados</span><strong id="kpiCompleted">0</strong></article>
+        <article class="kpi"><span>Cumplimiento</span><strong id="kpiCompliance">0%</strong></article>
+      </div>
+
+      <div class="dashboard-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Estado de mantenimientos</h2>
+          </div>
+          <canvas id="statusChart" height="210"></canvas>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Distribución por área</h2>
+          </div>
+          <canvas id="areaChart" height="210"></canvas>
+        </section>
+        <section class="panel wide">
+          <div class="panel-head">
+            <h2>Alertas automáticas</h2>
+            <span id="alertCount" class="pill">0 alertas</span>
+          </div>
+          <div id="alerts" class="alert-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="equipos" class="view">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Buscar por equipo, placa, serie o ubicación">
+        <select id="statusFilter">
+          <option value="">Todos los estados</option>
+          <option>Vigente</option>
+          <option>Proximo a vencer</option>
+          <option>Vencido</option>
+          <option>Pendiente</option>
+          <option>Sin programacion</option>
+        </select>
+      </div>
+      <div id="equipmentList" class="equipment-grid"></div>
+    </section>
+
+    <section id="calendario" class="view">
+      <div class="calendar-shell">
+        <div class="calendar-head">
+          <button id="prevMonth" class="icon-btn">‹</button>
+          <h2 id="calendarTitle">Mes</h2>
+          <button id="nextMonth" class="icon-btn">›</button>
+        </div>
+        <div class="calendar-weekdays">
+          <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+        </div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </div>
+    </section>
+
+    <section id="datos" class="view">
+      <div class="data-panel">
+        <h2>Importar equipos desde Excel o CSV</h2>
+        <p>Columnas esperadas: Nombre del equipo, Placa, Número de serie, Ubicación, Área. Puede incluir fechas y frecuencia.</p>
+        <input id="importFile" type="file" accept=".csv,.xlsx">
+        <button id="importBtn">Importar archivo</button>
+        <pre id="importResult"></pre>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="equipmentDialog">
+    <form id="equipmentForm" method="dialog">
+      <header>
+        <h2 id="formTitle">Nuevo equipo</h2>
+        <button type="button" id="closeDialog" class="icon-btn">×</button>
+      </header>
+      <input type="hidden" id="equipmentId">
+      <label>Nombre del equipo<input id="name" required></label>
+      <label>Placa<input id="plate" required></label>
+      <label>Número de serie<input id="serial_number" required></label>
+      <label>Ubicación<input id="location" required></label>
+      <label>Área<select id="area" required><option>UCI</option><option>Urgencias</option><option>Cirugia</option></select></label>
+      <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
+      <label>Próximo mantenimiento<input id="next_maintenance" type="date"></label>
+      <label>Frecuencia<select id="frequency_months"><option value="6">Cada 6 meses</option><option value="12">Cada 12 meses</option></select></label>
+      <label class="check"><input id="pending_intervention" type="checkbox"> Pendiente de intervención</label>
+      <footer>
+        <button type="button" id="deleteEquipment" class="danger">Eliminar</button>
+        <span></span>
+        <button type="button" id="completeMaintenance" class="secondary">Marcar realizado</button>
+        <button type="submit">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

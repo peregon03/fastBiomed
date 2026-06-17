@@ -1,0 +1,6 @@
+app/data/
+app/__pycache__/
+backups/
+work/
+*.pyc
+.env
