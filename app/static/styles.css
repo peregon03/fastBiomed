@@ -85,6 +85,7 @@ button {
   padding: 10px 14px;
   cursor: pointer;
   min-height: 40px;
+  white-space: nowrap;
 }
 
 button.secondary {
@@ -162,6 +163,7 @@ nav, .area-filter {
 main {
   padding: 28px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .topbar {
@@ -184,6 +186,10 @@ p { color: var(--muted); }
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.actions button {
+  flex: 0 0 auto;
 }
 
 .view { display: none; }
@@ -232,6 +238,12 @@ p { color: var(--muted); }
 .panel {
   padding: 18px;
   min-width: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
 }
 
 .panel.wide {
@@ -297,6 +309,8 @@ input, select {
   padding: 9px 11px;
   background: white;
   color: var(--ink);
+  width: 100%;
+  max-width: 100%;
 }
 
 .equipment-grid {
@@ -331,6 +345,7 @@ input, select {
 
 .calendar-shell, .data-panel {
   padding: 18px;
+  overflow-x: auto;
 }
 
 .calendar-head {
@@ -445,16 +460,196 @@ pre {
 
 @media (max-width: 980px) {
   body { grid-template-columns: 1fr; }
-  .sidebar { position: relative; min-height: auto; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .sidebar {
+    position: relative;
+    min-height: auto;
+    padding: 16px;
+  }
+  .sidebar .brand {
+    margin-bottom: 14px;
+  }
+  .sidebar nav {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .nav-btn {
+    width: auto;
+    flex: 0 0 auto;
+    text-align: center;
+  }
+  .area-filter {
+    margin-top: 14px;
+    padding-top: 12px;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+  }
+  .area-filter button {
+    width: auto;
+    flex: 0 0 auto;
+    text-align: center;
+  }
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
   .topbar { flex-direction: column; }
 }
 
 @media (max-width: 640px) {
-  main { padding: 16px; }
-  .kpi-grid, form { grid-template-columns: 1fr; }
-  form header, form footer { grid-column: auto; grid-template-columns: 1fr; }
-  .day { min-height: 92px; padding: 5px; }
-  .event { font-size: 11px; }
+  body {
+    display: block;
+    min-width: 0;
+  }
+  main {
+    padding: 12px;
+    overflow: visible;
+  }
+  .login-screen {
+    padding: 14px;
+  }
+  .login-box {
+    padding: 18px;
+  }
+  .brand {
+    gap: 10px;
+  }
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+  .sidebar {
+    padding: 12px;
+  }
+  .sidebar .brand strong,
+  .login-brand strong {
+    font-size: 15px;
+  }
+  .sidebar .brand small,
+  .login-brand small {
+    font-size: 12px;
+  }
+  .nav-btn,
+  .area-filter button,
+  button {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+  .topbar {
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 24px;
+  }
+  h2 {
+    font-size: 16px;
+  }
+  p {
+    font-size: 14px;
+  }
+  .actions,
+  .toolbar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .actions button,
+  .toolbar input,
+  .toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+  #newEquipment,
+  #search {
+    grid-column: 1 / -1;
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .kpi {
+    padding: 12px;
+  }
+  .kpi strong {
+    font-size: 24px;
+  }
+  .panel,
+  .calendar-shell,
+  .data-panel {
+    padding: 12px;
+  }
+  .panel-head,
+  .alert-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .equipment-grid {
+    grid-template-columns: 1fr;
+  }
+  .equipment-card {
+    padding: 12px;
+  }
+  .meta {
+    grid-template-columns: minmax(84px, auto) 1fr;
+    overflow-wrap: anywhere;
+  }
+  .calendar-head {
+    justify-content: space-between;
+    position: sticky;
+    left: 0;
+    min-width: 320px;
+  }
+  .calendar-weekdays,
+  .calendar-grid {
+    min-width: 680px;
+  }
+  .calendar-weekdays span {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  .day {
+    min-height: 96px;
+    padding: 5px;
+  }
+  .event {
+    font-size: 11px;
+    padding: 5px;
+    overflow-wrap: anywhere;
+  }
+  dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+  }
+  form {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+  form header,
+  form footer {
+    grid-column: 1;
+    grid-template-columns: 1fr;
+  }
+  form footer {
+    gap: 8px;
+  }
+  form footer span {
+    display: none;
+  }
+  form footer button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 390px) {
+  .actions,
+  .toolbar,
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .actions button {
+    width: 100%;
+  }
 }
