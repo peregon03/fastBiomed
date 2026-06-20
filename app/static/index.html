@@ -71,7 +71,6 @@
         <article class="kpi" data-kpi="scheduled"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
         <article class="kpi yellow" data-kpi="dueSoon"><span>Próximos<small>en los próximos 30 días</small></span><strong id="kpiDueSoon">0</strong></article>
         <article class="kpi red" data-kpi="overdue"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
-        <!-- <article class="kpi blue" data-kpi="reported"><span>Reportados<small>requieren atención pronta</small></span><strong id="kpiReported">0</strong></article> -->
         <article class="kpi green" data-kpi="completed"><span>Realizados</span><strong id="kpiCompleted">0</strong></article>
         <article class="kpi teal" data-kpi="thisMonth"><span>Realizados este mes</span><strong id="kpiThisMonth">0</strong></article>
         <article class="kpi gray" data-kpi="noSchedule" hidden><span>Sin programar</span><strong id="kpiNoSchedule">0</strong></article>
@@ -119,7 +118,6 @@
           <option>Vigente</option>
           <option value="Proximo a vencer">Próximo a vencer</option>
           <option value="Vencido">Vencido</option>
-          <option value="Pendiente">Reportado</option>
           <option value="Sin programacion">Sin programación</option>
         </select>
       </div>
@@ -127,6 +125,17 @@
     </section>
 
     <section id="calendario" class="view">
+      <div class="cal-filter-bar">
+        <span>Resaltar en miniaturas:</span>
+        <select id="calFilter">
+          <option value="all">Todos los equipos</option>
+          <option value="Proximo a vencer">Próximos a vencer</option>
+          <option value="Vencido">Vencidos</option>
+          <option value="Vigente">Vigentes</option>
+          <option value="completed">Realizados</option>
+        </select>
+      </div>
+      <div id="yearOverview" class="year-overview"></div>
       <div class="calendar-shell">
         <div class="calendar-head">
           <button id="prevMonth" class="icon-btn">‹</button>
@@ -166,7 +175,6 @@
       <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
       <label>Próximo mantenimiento<input id="next_maintenance" type="date" readonly></label>
       <label>Frecuencia<select id="frequency_months"><option value="6">Cada 6 meses</option><option value="12">Cada 12 meses</option></select></label>
-      <label class="check"><input id="pending_intervention" type="checkbox"> Pendiente de intervención</label>
       <footer>
         <button type="button" id="deleteEquipment" class="danger">Eliminar</button>
         <span></span>

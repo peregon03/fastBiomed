@@ -170,7 +170,7 @@ def dashboard() -> dict:
         equipment = read_equipment(conn)
         history = conn.execute("SELECT equipment_id, performed_at FROM maintenance_history ORDER BY performed_at").fetchall()
     total = len(equipment)
-    scheduled = sum(1 for item in equipment if status_for(item["next_maintenance"], item["pending_intervention"]) == "Vigente")
+    scheduled = sum(1 for item in equipment if item["next_maintenance"])
     completed_ids = set(h["equipment_id"] for h in history)
     completed = sum(1 for item in equipment if item["id"] in completed_ids)
     overdue = sum(1 for item in equipment if item["status"] == "Vencido")

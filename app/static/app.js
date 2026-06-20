@@ -12,6 +12,7 @@ const state = {
   allEquipment: [],
   dashboard: null,
   calendarDate: new Date(),
+  calendarFilter: 'all',
   session: null,
   activeKpi: null,
 };
@@ -102,7 +103,7 @@ async function queryHistory() {
 
 function buildDashboard(allEquipment, history) {
   const total = allEquipment.length;
-  const scheduled = allEquipment.filter((item) => item.status === 'Vigente').length;
+  const scheduled = allEquipment.filter((item) => item.next_maintenance).length;
   const completedIds = new Set(history.map(h => h.equipment_id));
   const completed = allEquipment.filter(item => completedIds.has(item.id)).length;
   const overdue = allEquipment.filter((item) => item.status === 'Vencido').length;
@@ -211,7 +212,25 @@ function renderKpiDetail() {
     return;
   }
 
-  const statusMap = { total: null, scheduled: 'Vigente', dueSoon: 'Proximo a vencer', overdue: 'Vencido', reported: 'Pendiente', noSchedule: 'Sin programacion' };
+  if (type === 'scheduled') {
+    const items = state.allEquipment.filter(e => e.next_maintenance);
+    const rows = items.map(item => `
+      <div class="kpi-detail-item">
+        <div>
+          <strong>${item.name}</strong>
+          <div class="meta-line">${areaLabel(item.area)} · ${item.plate} · Próximo: ${item.next_maintenance}</div>
+        </div>
+        ${badge(item.status)}
+      </div>
+    `).join('');
+    panel.innerHTML = `
+      <div class="panel-head"><h2>Equipos programados</h2><span class="pill">${items.length} equipos</span></div>
+      ${items.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>Sin equipos programados.</p>'}
+    `;
+    return;
+  }
+
+  const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido', reported: 'Pendiente', noSchedule: 'Sin programacion' };
   const filterStatus = statusMap[type];
   const items = filterStatus
     ? state.allEquipment.filter(e => e.status === filterStatus)
@@ -358,6 +377,80 @@ function renderEquipment() {
   });
 }
 
+function renderYearOverview() {
+  const year = state.calendarDate.getFullYear();
+  const activeMonth = state.calendarDate.getMonth();
+  const filter = state.calendarFilter;
+  const statusColors = {
+    'Vencido': '#b42318',
+    'Pendiente': '#0284c7',
+    'Proximo a vencer': '#fbbf24',
+    'Vigente': '#16803c',
+    'completed': '#16803c',
+  };
+
+  // Construir mapa de eventos: 'YYYY-MM-DD' → [items]
+  const eventMap = {};
+  const addEvent = (date, item) => {
+    if (!eventMap[date]) eventMap[date] = [];
+    eventMap[date].push(item);
+  };
+  if (filter === 'completed') {
+    state.history.forEach(h => {
+      if (h.performed_at?.slice(0, 4) === String(year)) addEvent(h.performed_at, { status: 'completed' });
+    });
+  } else {
+    const source = filter === 'all' ? state.allEquipment : state.allEquipment.filter(e => e.status === filter);
+    source.forEach(item => {
+      if (item.next_maintenance?.slice(0, 4) === String(year)) addEvent(item.next_maintenance, item);
+    });
+  }
+
+  // Color mas urgente del dia
+  const dayColor = (events) => {
+    if (filter !== 'all') return statusColors[filter] || '#2563eb';
+    const statuses = events.map(e => e.status);
+    for (const s of ['Vencido', 'Pendiente', 'Proximo a vencer', 'Vigente', 'completed']) {
+      if (statuses.includes(s)) return statusColors[s];
+    }
+    return '#2563eb';
+  };
+
+  const months = [];
+  for (let m = 0; m < 12; m++) {
+    const firstDay = new Date(year, m, 1);
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const firstWeekday = (firstDay.getDay() + 6) % 7;
+    const monthName = firstDay.toLocaleDateString('es-CO', { month: 'long' });
+    let cells = '<div class="mini-day"></div>'.repeat(firstWeekday);
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const events = eventMap[iso];
+      if (events?.length) {
+        const color = dayColor(events);
+        const count = events.length > 1 ? ` title="${events.length} equipos"` : '';
+        cells += `<div class="mini-day has-event" style="background:${color}"${count}></div>`;
+      } else {
+        cells += `<div class="mini-day">${d}</div>`;
+      }
+    }
+    months.push(`
+      <div class="mini-month${m === activeMonth ? ' active' : ''}" data-month="${m}">
+        <div class="mini-month-title">${monthName}</div>
+        <div class="mini-grid">${cells}</div>
+      </div>
+    `);
+  }
+  $('#yearOverview').innerHTML = months.join('');
+  $$('.mini-month').forEach(card => {
+    card.addEventListener('click', () => {
+      state.calendarDate = new Date(year, parseInt(card.dataset.month), 1);
+      renderCalendar();
+      $('.calendar-shell').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
 function renderCalendar() {
   const current = new Date(state.calendarDate.getFullYear(), state.calendarDate.getMonth(), 1);
   const year = current.getFullYear();
@@ -388,6 +481,7 @@ function renderCalendar() {
     `);
   }
   $('#calendarGrid').innerHTML = cells.join('');
+  renderYearOverview();
 }
 
 function switchView(view) {
@@ -642,6 +736,10 @@ function wireEvents() {
     await refresh();
   });
   $('#completeMaintenance').addEventListener('click', completeMaintenance);
+  $('#calFilter').addEventListener('change', e => {
+    state.calendarFilter = e.target.value;
+    renderYearOverview();
+  });
   $('#prevMonth').addEventListener('click', () => {
     state.calendarDate.setMonth(state.calendarDate.getMonth() - 1);
     renderCalendar();

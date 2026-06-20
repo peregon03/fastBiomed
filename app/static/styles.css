@@ -383,6 +383,80 @@ input, select {
   font-size: 13px;
 }
 
+/* ── Year overview ─────────────────────────────────────────── */
+.cal-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.cal-filter-bar select {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.year-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.mini-month {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.mini-month:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(37,99,235,.12);
+}
+.mini-month.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.2);
+}
+
+.mini-month-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ink);
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.mini-day {
+  width: 100%;
+  aspect-ratio: 1;
+  font-size: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  border-radius: 2px;
+}
+
+.mini-day.has-event {
+  border-radius: 50%;
+  font-size: 0;
+}
+/* ── end Year overview ─────────────────────────────────────── */
+
 .calendar-shell, .data-panel {
   padding: 18px;
   overflow-x: auto;
@@ -634,6 +708,12 @@ pre {
   .meta {
     grid-template-columns: minmax(84px, auto) 1fr;
     overflow-wrap: anywhere;
+  }
+  .year-overview {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .cal-filter-bar {
+    flex-wrap: wrap;
   }
   .calendar-head {
     justify-content: space-between;
