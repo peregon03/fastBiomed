@@ -63,13 +63,15 @@
 
     <section id="dashboard" class="view active">
       <div class="kpi-grid">
-        <article class="kpi"><span>Total equipos</span><strong id="kpiEquipment">0</strong></article>
-        <article class="kpi"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
-        <article class="kpi yellow"><span>Próximos</span><strong id="kpiDueSoon">0</strong></article>
-        <article class="kpi red"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
-        <article class="kpi green"><span>Realizados</span><strong id="kpiCompleted">0</strong></article>
+        <article class="kpi" data-kpi="total"><span>Total equipos</span><strong id="kpiEquipment">0</strong></article>
+        <article class="kpi" data-kpi="scheduled"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
+        <article class="kpi yellow" data-kpi="dueSoon"><span>Próximos</span><strong id="kpiDueSoon">0</strong></article>
+        <article class="kpi red" data-kpi="overdue"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
+        <article class="kpi green" data-kpi="completed"><span>Realizados</span><strong id="kpiCompleted">0</strong></article>
         <article class="kpi"><span>Cumplimiento</span><strong id="kpiCompliance">0%</strong></article>
       </div>
+
+      <div id="kpiDetail" class="panel" hidden></div>
 
       <div class="dashboard-grid">
         <section class="panel">

@@ -653,3 +653,47 @@ pre {
     width: 100%;
   }
 }
+
+/* KPI cards interactivas */
+.kpi[data-kpi] {
+  cursor: pointer;
+  transition: box-shadow .15s, background .15s;
+}
+.kpi[data-kpi]:hover {
+  box-shadow: 0 4px 16px rgba(21, 32, 51, .1);
+}
+.kpi[data-kpi].active {
+  background: #f0f5ff;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, .16);
+}
+.kpi.red[data-kpi].active { background: #fff5f5; }
+.kpi.yellow[data-kpi].active { background: #fffbeb; }
+.kpi.green[data-kpi].active { background: #f0fdf4; }
+
+/* Panel de detalle KPI */
+#kpiDetail {
+  margin-bottom: 18px;
+  padding: 18px;
+}
+.kpi-detail-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  max-height: 320px;
+  overflow: auto;
+}
+.kpi-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fbfdff;
+}
+.meta-line {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}

@@ -9,9 +9,11 @@ const state = {
   search: '',
   equipment: [],
   history: [],
+  allEquipment: [],
   dashboard: null,
   calendarDate: new Date(),
   session: null,
+  activeKpi: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -98,7 +100,7 @@ async function queryHistory() {
 
 function buildDashboard(allEquipment, history) {
   const total = allEquipment.length;
-  const scheduled = allEquipment.filter((item) => item.next_maintenance).length;
+  const scheduled = allEquipment.filter((item) => item.status === 'Vigente').length;
   const completed = history.length;
   const overdue = allEquipment.filter((item) => item.status === 'Vencido').length;
   const dueSoon = allEquipment.filter((item) => item.status === 'Proximo a vencer').length;
@@ -140,10 +142,78 @@ async function refresh() {
   const allEquipment = (allRows.data || []).map(enrich);
   state.equipment = filteredEquipment;
   state.history = history;
+  state.allEquipment = allEquipment;
   state.dashboard = buildDashboard(allEquipment, history);
   renderDashboard();
   renderEquipment();
   renderCalendar();
+}
+
+function renderKpiDetail() {
+  const panel = $('#kpiDetail');
+  const type = state.activeKpi;
+  const labels = {
+    total: 'Todos los equipos',
+    scheduled: 'Equipos programados (Vigente)',
+    dueSoon: 'Próximos a vencer',
+    overdue: 'Equipos vencidos',
+    completed: 'Mantenimientos realizados',
+  };
+  const title = labels[type] || '';
+
+  if (type === 'completed') {
+    const records = state.history;
+    const rows = records.map(h => {
+      const eq = state.allEquipment.find(e => e.id === h.equipment_id);
+      return `<div class="kpi-detail-item">
+        <div>
+          <strong>${eq?.name || '—'}</strong>
+          <div class="meta-line">${eq ? areaLabel(eq.area) + ' · ' + eq.plate : ''} · Realizado: ${h.performed_at}</div>
+        </div>
+        <span class="status Vigente">Realizado</span>
+      </div>`;
+    }).join('');
+    panel.innerHTML = `
+      <div class="panel-head"><h2>${title}</h2><span class="pill">${records.length} registros</span></div>
+      ${records.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>No hay registros de mantenimiento.</p>'}
+    `;
+    return;
+  }
+
+  const statusMap = { total: null, scheduled: 'Vigente', dueSoon: 'Proximo a vencer', overdue: 'Vencido' };
+  const filterStatus = statusMap[type];
+  const items = filterStatus
+    ? state.allEquipment.filter(e => e.status === filterStatus)
+    : state.allEquipment;
+
+  const rows = items.map(item => `
+    <div class="kpi-detail-item">
+      <div>
+        <strong>${item.name}</strong>
+        <div class="meta-line">${areaLabel(item.area)} · ${item.plate} · ${item.next_maintenance ? 'Próximo: ' + item.next_maintenance : 'Sin fecha'}</div>
+      </div>
+      ${badge(item.status)}
+    </div>
+  `).join('');
+
+  panel.innerHTML = `
+    <div class="panel-head"><h2>${title}</h2><span class="pill">${items.length} equipos</span></div>
+    ${items.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>Sin equipos en este estado.</p>'}
+  `;
+}
+
+function showKpiDetail(type) {
+  const panel = $('#kpiDetail');
+  if (state.activeKpi === type) {
+    state.activeKpi = null;
+    panel.hidden = true;
+    $$('.kpi[data-kpi]').forEach(c => c.classList.remove('active'));
+    return;
+  }
+  state.activeKpi = type;
+  $$('.kpi[data-kpi]').forEach(c => c.classList.toggle('active', c.dataset.kpi === type));
+  renderKpiDetail();
+  panel.hidden = false;
 }
 
 function renderDashboard() {
@@ -176,6 +246,7 @@ function renderDashboard() {
     'Urgencias': '#0f766e',
     'Cirugia': '#7c3aed',
   });
+  if (state.activeKpi) renderKpiDetail();
 }
 
 function drawBarChart(canvas, values, colors) {
@@ -473,6 +544,7 @@ function wireEvents() {
     state.session = null;
     showApp(false);
   });
+  $$('.kpi[data-kpi]').forEach(card => card.addEventListener('click', () => showKpiDetail(card.dataset.kpi)));
   $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
   $$('.area-filter button').forEach(btn => btn.addEventListener('click', async () => {
     state.area = btn.dataset.area;
