@@ -50,7 +50,6 @@ function statusFor(item) {
   const due = new Date(`${item.next_maintenance}T00:00:00`);
   const delta = Math.round((due - todayDate()) / 86400000);
   if (delta < 0) return 'Vencido';
-  if (item.pending_intervention) return 'Pendiente';
   if (delta <= 30) return 'Proximo a vencer';
   return 'Vigente';
 }
@@ -70,8 +69,7 @@ function statusClass(status) {
 function statusLabel(status) {
   return status
     .replace('Proximo a vencer', 'Próximo a vencer')
-    .replace('Sin programacion', 'Sin programación')
-    .replace('Pendiente', 'Reportado');
+    .replace('Sin programacion', 'Sin programación');
 }
 
 function areaLabel(area) {
@@ -79,8 +77,7 @@ function areaLabel(area) {
 }
 
 function badge(status) {
-  const tooltip = status === 'Pendiente' ? ' title="Requiere revisión inmediata"' : '';
-  return `<span class="status ${statusClass(status)}"${tooltip}>${statusLabel(status)}</span>`;
+  return `<span class="status ${statusClass(status)}">${statusLabel(status)}</span>`;
 }
 
 async function queryEquipment() {
@@ -103,17 +100,16 @@ async function queryHistory() {
 
 function buildDashboard(allEquipment, history) {
   const total = allEquipment.length;
-  const scheduled = allEquipment.filter((item) => item.next_maintenance).length;
+  const scheduled = allEquipment.filter((item) => item.next_maintenance && item.status !== 'Vencido').length;
   const completedIds = new Set(history.map(h => h.equipment_id));
   const completed = allEquipment.filter(item => completedIds.has(item.id)).length;
   const overdue = allEquipment.filter((item) => item.status === 'Vencido').length;
   const dueSoon = allEquipment.filter((item) => item.status === 'Proximo a vencer').length;
   const noSchedule = allEquipment.filter((item) => item.status === 'Sin programacion').length;
-  const pending = allEquipment.filter((item) => item.status === 'Pendiente').length;
   const todayStr = todayDate().toISOString().slice(0, 10);
   const thisMonth = todayStr.slice(0, 7);
   const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
-  const denominator = completed + overdue + dueSoon + pending;
+  const denominator = completed + overdue + dueSoon;
   const compliance = denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0;
   const statusCounts = {};
   const areaCounts = { UCI: 0, Urgencias: 0, Cirugia: 0 };
@@ -127,11 +123,11 @@ function buildDashboard(allEquipment, history) {
     monthlyCompleted[key] = (monthlyCompleted[key] || 0) + 1;
   });
   const alerts = allEquipment.filter((item) =>
-    ['Vencido', 'Proximo a vencer', 'Pendiente'].includes(item.status)
+    ['Vencido', 'Proximo a vencer'].includes(item.status)
   );
   const unscheduled = allEquipment.filter((item) => item.status === 'Sin programacion');
   return {
-    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule, pending },
+    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule },
     statusCounts,
     areaCounts,
     monthlyCompleted,
@@ -163,10 +159,9 @@ function renderKpiDetail() {
   const type = state.activeKpi;
   const labels = {
     total: 'Todos los equipos',
-    scheduled: 'Equipos programados (Vigente)',
+    scheduled: 'Equipos programados',
     dueSoon: 'Próximos a vencer',
     overdue: 'Equipos vencidos',
-    reported: 'Equipos reportados',
     noSchedule: 'Equipos sin programar',
     completed: 'Mantenimientos realizados',
     thisMonth: 'Realizados este mes',
@@ -230,7 +225,7 @@ function renderKpiDetail() {
     return;
   }
 
-  const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido', reported: 'Pendiente', noSchedule: 'Sin programacion' };
+  const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido', noSchedule: 'Sin programacion' };
   const filterStatus = statusMap[type];
   const items = filterStatus
     ? state.allEquipment.filter(e => e.status === filterStatus)
@@ -272,7 +267,6 @@ function renderDashboard() {
   $('#kpiScheduled').textContent = data.totals.scheduled;
   $('#kpiDueSoon').textContent = data.totals.dueSoon;
   $('#kpiOverdue').textContent = data.totals.overdue;
-  // $('#kpiReported').textContent = data.totals.pending;
   const noScheduleCard = $('#kpiNoSchedule').closest('article');
   noScheduleCard.hidden = data.totals.noSchedule === 0;
   $('#kpiNoSchedule').textContent = data.totals.noSchedule;
@@ -309,7 +303,6 @@ function renderDashboard() {
     'Vigente': '#16803c',
     'Proximo a vencer': '#fbbf24',
     'Vencido': '#b42318',
-    'Pendiente': '#0284c7',
     'Sin programacion': '#64748b',
   });
   drawBarChart($('#areaChart'), data.areaCounts, {
@@ -383,7 +376,6 @@ function renderYearOverview() {
   const filter = state.calendarFilter;
   const statusColors = {
     'Vencido': '#b42318',
-    'Pendiente': '#0284c7',
     'Proximo a vencer': '#fbbf24',
     'Vigente': '#16803c',
     'completed': '#16803c',
@@ -410,7 +402,7 @@ function renderYearOverview() {
   const dayColor = (events) => {
     if (filter !== 'all') return statusColors[filter] || '#2563eb';
     const statuses = events.map(e => e.status);
-    for (const s of ['Vencido', 'Pendiente', 'Proximo a vencer', 'Vigente', 'completed']) {
+    for (const s of ['Vencido', 'Proximo a vencer', 'Vigente', 'completed']) {
       if (statuses.includes(s)) return statusColors[s];
     }
     return '#2563eb';
@@ -510,7 +502,6 @@ function openEquipment(id = null) {
   $('#last_maintenance').value = item?.last_maintenance || '';
   $('#frequency_months').value = item?.frequency_months || 6;
   $('#next_maintenance').value = item?.next_maintenance || '';
-  $('#pending_intervention').checked = Boolean(item?.pending_intervention);
   updateNextMaintenancePreview();
   $('#deleteEquipment').style.visibility = item ? 'visible' : 'hidden';
   $('#completeMaintenance').style.visibility = item ? 'visible' : 'hidden';
@@ -529,7 +520,6 @@ function formPayload() {
     last_maintenance: lastMaintenance,
     next_maintenance: lastMaintenance ? addMonths(lastMaintenance, frequency) : null,
     frequency_months: frequency,
-    pending_intervention: $('#pending_intervention').checked,
   };
 }
 
@@ -553,7 +543,7 @@ async function completeMaintenance() {
   const newNext = addMonths(performedAt, Number(item.frequency_months));
   const update = await supabaseClient
     .from('equipment')
-    .update({ last_maintenance: performedAt, next_maintenance: newNext, pending_intervention: false })
+    .update({ last_maintenance: performedAt, next_maintenance: newNext })
     .eq('id', id);
   if (update.error) throw update.error;
   const history = await supabaseClient.from('maintenance_history').insert({

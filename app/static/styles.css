@@ -262,7 +262,6 @@ p { color: var(--muted); }
 .kpi.yellow { border-left-color: #fbbf24; }
 .kpi.red { border-left-color: var(--red); }
 .kpi.teal { border-left-color: var(--teal); }
-.kpi.blue { border-left-color: #0284c7; }
 .kpi.gray { border-left-color: #64748b; }
 
 .dashboard-grid {
@@ -306,7 +305,6 @@ canvas {
 .status.Vigente { color: var(--green); background: #dcfce7; }
 .status.Proximo { color: var(--yellow); background: #fef3c7; }
 .status.Vencido { color: var(--red); background: #fee4e2; }
-.status.Pendiente { color: #075985; background: #e0f2fe; }
 .status.Sin { color: #475569; background: #e2e8f0; }
 .pill-gray { background: #e2e8f0; color: #475569; }
 .section-hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
