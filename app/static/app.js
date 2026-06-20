@@ -253,7 +253,7 @@ function renderDashboard() {
   $('#kpiScheduled').textContent = data.totals.scheduled;
   $('#kpiDueSoon').textContent = data.totals.dueSoon;
   $('#kpiOverdue').textContent = data.totals.overdue;
-  $('#kpiReported').textContent = data.totals.pending;
+  // $('#kpiReported').textContent = data.totals.pending;
   const noScheduleCard = $('#kpiNoSchedule').closest('article');
   noScheduleCard.hidden = data.totals.noSchedule === 0;
   $('#kpiNoSchedule').textContent = data.totals.noSchedule;
