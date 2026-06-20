@@ -261,6 +261,9 @@ p { color: var(--muted); }
 .kpi.green { border-left-color: var(--green); }
 .kpi.yellow { border-left-color: #fbbf24; }
 .kpi.red { border-left-color: var(--red); }
+.kpi.teal { border-left-color: var(--teal); }
+.kpi.blue { border-left-color: #0284c7; }
+.kpi.gray { border-left-color: #64748b; }
 
 .dashboard-grid {
   display: grid;

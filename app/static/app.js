@@ -111,9 +111,7 @@ function buildDashboard(allEquipment, history) {
   const pending = allEquipment.filter((item) => item.status === 'Pendiente').length;
   const todayStr = todayDate().toISOString().slice(0, 10);
   const thisMonth = todayStr.slice(0, 7);
-  const thisYear  = todayStr.slice(0, 4);
   const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
-  const completedThisYear  = history.filter(h => h.performed_at.slice(0, 4) === thisYear).length;
   const denominator = completed + overdue + dueSoon + pending;
   const compliance = denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0;
   const statusCounts = {};
@@ -132,7 +130,7 @@ function buildDashboard(allEquipment, history) {
   );
   const unscheduled = allEquipment.filter((item) => item.status === 'Sin programacion');
   return {
-    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, completedThisYear, compliance, noSchedule, pending },
+    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule, pending },
     statusCounts,
     areaCounts,
     monthlyCompleted,
@@ -167,16 +165,15 @@ function renderKpiDetail() {
     scheduled: 'Equipos programados (Vigente)',
     dueSoon: 'Próximos a vencer',
     overdue: 'Equipos vencidos',
+    reported: 'Equipos reportados',
+    noSchedule: 'Equipos sin programar',
     completed: 'Mantenimientos realizados',
     thisMonth: 'Realizados este mes',
-    thisYear: 'Realizados este año',
   };
   const title = labels[type] || '';
 
-  if (type === 'thisMonth' || type === 'thisYear') {
-    const filterKey = type === 'thisMonth'
-      ? todayDate().toISOString().slice(0, 7)
-      : todayDate().toISOString().slice(0, 4);
+  if (type === 'thisMonth') {
+    const filterKey = todayDate().toISOString().slice(0, 7);
     const records = state.history.filter(h => h.performed_at.startsWith(filterKey));
     const rows = records.map(h => {
       const eq = state.allEquipment.find(e => e.id === h.equipment_id);
@@ -214,7 +211,7 @@ function renderKpiDetail() {
     return;
   }
 
-  const statusMap = { total: null, scheduled: 'Vigente', dueSoon: 'Proximo a vencer', overdue: 'Vencido' };
+  const statusMap = { total: null, scheduled: 'Vigente', dueSoon: 'Proximo a vencer', overdue: 'Vencido', reported: 'Pendiente', noSchedule: 'Sin programacion' };
   const filterStatus = statusMap[type];
   const items = filterStatus
     ? state.allEquipment.filter(e => e.status === filterStatus)
@@ -256,9 +253,12 @@ function renderDashboard() {
   $('#kpiScheduled').textContent = data.totals.scheduled;
   $('#kpiDueSoon').textContent = data.totals.dueSoon;
   $('#kpiOverdue').textContent = data.totals.overdue;
+  $('#kpiReported').textContent = data.totals.pending;
+  const noScheduleCard = $('#kpiNoSchedule').closest('article');
+  noScheduleCard.hidden = data.totals.noSchedule === 0;
+  $('#kpiNoSchedule').textContent = data.totals.noSchedule;
   $('#kpiCompleted').textContent = data.totals.completed;
   $('#kpiThisMonth').textContent = data.totals.completedThisMonth;
-  $('#kpiThisYear').textContent  = data.totals.completedThisYear;
   $('#kpiCompliance').textContent = `${data.totals.compliance}%`;
   $('#alertCount').textContent = `${data.alerts.length} alertas`;
   $('#alerts').innerHTML = data.alerts.length ? data.alerts.map(item => `
