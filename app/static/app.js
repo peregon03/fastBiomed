@@ -69,7 +69,8 @@ function statusClass(status) {
 function statusLabel(status) {
   return status
     .replace('Proximo a vencer', 'Próximo a vencer')
-    .replace('Sin programacion', 'Sin programación');
+    .replace('Sin programacion', 'Sin programación')
+    .replace('Pendiente', 'Reportado');
 }
 
 function areaLabel(area) {
@@ -77,7 +78,8 @@ function areaLabel(area) {
 }
 
 function badge(status) {
-  return `<span class="status ${statusClass(status)}">${statusLabel(status)}</span>`;
+  const tooltip = status === 'Pendiente' ? ' title="Requiere revisión inmediata"' : '';
+  return `<span class="status ${statusClass(status)}"${tooltip}>${statusLabel(status)}</span>`;
 }
 
 async function queryEquipment() {
@@ -107,6 +109,11 @@ function buildDashboard(allEquipment, history) {
   const dueSoon = allEquipment.filter((item) => item.status === 'Proximo a vencer').length;
   const noSchedule = allEquipment.filter((item) => item.status === 'Sin programacion').length;
   const pending = allEquipment.filter((item) => item.status === 'Pendiente').length;
+  const todayStr = todayDate().toISOString().slice(0, 10);
+  const thisMonth = todayStr.slice(0, 7);
+  const thisYear  = todayStr.slice(0, 4);
+  const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
+  const completedThisYear  = history.filter(h => h.performed_at.slice(0, 4) === thisYear).length;
   const denominator = completed + overdue + dueSoon + pending;
   const compliance = denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0;
   const statusCounts = {};
@@ -121,14 +128,16 @@ function buildDashboard(allEquipment, history) {
     monthlyCompleted[key] = (monthlyCompleted[key] || 0) + 1;
   });
   const alerts = allEquipment.filter((item) =>
-    ['Vencido', 'Proximo a vencer', 'Sin programacion', 'Pendiente'].includes(item.status)
+    ['Vencido', 'Proximo a vencer', 'Pendiente'].includes(item.status)
   );
+  const unscheduled = allEquipment.filter((item) => item.status === 'Sin programacion');
   return {
-    totals: { equipment: total, scheduled, dueSoon, overdue, completed, compliance, noSchedule, pending },
+    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, completedThisYear, compliance, noSchedule, pending },
     statusCounts,
     areaCounts,
     monthlyCompleted,
     alerts,
+    unscheduled,
   };
 }
 
@@ -159,8 +168,32 @@ function renderKpiDetail() {
     dueSoon: 'Próximos a vencer',
     overdue: 'Equipos vencidos',
     completed: 'Mantenimientos realizados',
+    thisMonth: 'Realizados este mes',
+    thisYear: 'Realizados este año',
   };
   const title = labels[type] || '';
+
+  if (type === 'thisMonth' || type === 'thisYear') {
+    const filterKey = type === 'thisMonth'
+      ? todayDate().toISOString().slice(0, 7)
+      : todayDate().toISOString().slice(0, 4);
+    const records = state.history.filter(h => h.performed_at.startsWith(filterKey));
+    const rows = records.map(h => {
+      const eq = state.allEquipment.find(e => e.id === h.equipment_id);
+      return `<div class="kpi-detail-item">
+        <div>
+          <strong>${eq?.name || '—'}</strong>
+          <div class="meta-line">${eq ? areaLabel(eq.area) + ' · ' + eq.plate : ''} · Realizado: ${h.performed_at}</div>
+        </div>
+        <span class="status Vigente">Realizado</span>
+      </div>`;
+    }).join('');
+    panel.innerHTML = `
+      <div class="panel-head"><h2>${title}</h2><span class="pill">${records.length} registros</span></div>
+      ${records.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>No hay registros en este período.</p>'}
+    `;
+    return;
+  }
 
   if (type === 'completed') {
     const records = state.history;
@@ -224,6 +257,8 @@ function renderDashboard() {
   $('#kpiDueSoon').textContent = data.totals.dueSoon;
   $('#kpiOverdue').textContent = data.totals.overdue;
   $('#kpiCompleted').textContent = data.totals.completed;
+  $('#kpiThisMonth').textContent = data.totals.completedThisMonth;
+  $('#kpiThisYear').textContent  = data.totals.completedThisYear;
   $('#kpiCompliance').textContent = `${data.totals.compliance}%`;
   $('#alertCount').textContent = `${data.alerts.length} alertas`;
   $('#alerts').innerHTML = data.alerts.length ? data.alerts.map(item => `
@@ -235,6 +270,22 @@ function renderDashboard() {
       ${badge(item.status)}
     </article>
   `).join('') : '<p>No hay alertas activas.</p>';
+  const unscheduledSection = $('#unscheduledSection');
+  if (data.unscheduled.length) {
+    unscheduledSection.hidden = false;
+    $('#unscheduledCount').textContent = data.unscheduled.length;
+    $('#unscheduledList').innerHTML = data.unscheduled.map(item => `
+      <article class="alert-item">
+        <div>
+          <strong>${item.name}</strong>
+          <div class="meta-line">${areaLabel(item.area)} · ${item.plate}</div>
+        </div>
+        ${badge(item.status)}
+      </article>
+    `).join('');
+  } else {
+    unscheduledSection.hidden = true;
+  }
   drawBarChart($('#statusChart'), data.statusCounts, {
     'Vigente': '#16803c',
     'Proximo a vencer': '#fbbf24',
@@ -524,6 +575,21 @@ async function loadSession() {
   if (state.session) await refresh();
 }
 
+function startClock() {
+  const TZ = 'America/Bogota';
+  function tick() {
+    const now = new Date();
+    $('#clockTime').textContent = now.toLocaleTimeString('es-CO', {
+      timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
+    });
+    $('#clockDate').textContent = now.toLocaleDateString('es-CO', {
+      timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
 function wireEvents() {
   $('#loginForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -603,6 +669,7 @@ function wireEvents() {
 }
 
 wireEvents();
+startClock();
 showApp(false);
 loadSession().catch(error => {
   $('#loginError').textContent = error.message;

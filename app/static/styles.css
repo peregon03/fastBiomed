@@ -197,9 +197,42 @@ p { color: var(--muted); }
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 14px;
   margin-bottom: 18px;
+}
+
+.dash-clock {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+#clockTime {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .5px;
+}
+
+#clockDate {
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.kpi span small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 2px;
 }
 
 .kpi, .panel, .data-panel, .calendar-shell {
@@ -270,7 +303,11 @@ canvas {
 .status.Vigente { color: var(--green); background: #dcfce7; }
 .status.Proximo { color: var(--yellow); background: #fef3c7; }
 .status.Vencido { color: var(--red); background: #fee4e2; }
-.status.Pendiente, .status.Sin { color: #075985; background: #e0f2fe; }
+.status.Pendiente { color: #075985; background: #e0f2fe; }
+.status.Sin { color: #475569; background: #e2e8f0; }
+.pill-gray { background: #e2e8f0; color: #475569; }
+.section-hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.unscheduled-section h2 { color: var(--muted); }
 
 .alert-list {
   display: grid;

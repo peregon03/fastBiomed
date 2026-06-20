@@ -62,12 +62,18 @@
     </header>
 
     <section id="dashboard" class="view active">
+      <div id="dashClock" class="dash-clock">
+        <span id="clockTime">--:--:--</span>
+        <span id="clockDate">--</span>
+      </div>
       <div class="kpi-grid">
         <article class="kpi" data-kpi="total"><span>Total equipos</span><strong id="kpiEquipment">0</strong></article>
         <article class="kpi" data-kpi="scheduled"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
-        <article class="kpi yellow" data-kpi="dueSoon"><span>Próximos</span><strong id="kpiDueSoon">0</strong></article>
+        <article class="kpi yellow" data-kpi="dueSoon"><span>Próximos<small>en los próximos 30 días</small></span><strong id="kpiDueSoon">0</strong></article>
         <article class="kpi red" data-kpi="overdue"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
         <article class="kpi green" data-kpi="completed"><span>Realizados</span><strong id="kpiCompleted">0</strong></article>
+        <article class="kpi" data-kpi="thisMonth"><span>Este mes</span><strong id="kpiThisMonth">0</strong></article>
+        <article class="kpi" data-kpi="thisYear"><span>Este año</span><strong id="kpiThisYear">0</strong></article>
         <article class="kpi"><span>Cumplimiento</span><strong id="kpiCompliance">0%</strong></article>
       </div>
 
@@ -93,6 +99,14 @@
           </div>
           <div id="alerts" class="alert-list"></div>
         </section>
+        <section id="unscheduledSection" class="panel wide unscheduled-section" hidden>
+          <div class="panel-head">
+            <h2>Sin programación</h2>
+            <span id="unscheduledCount" class="pill pill-gray">0</span>
+          </div>
+          <p class="section-hint">Estos equipos no tienen fecha de mantenimiento asignada.</p>
+          <div id="unscheduledList" class="alert-list"></div>
+        </section>
       </div>
     </section>
 
@@ -102,10 +116,10 @@
         <select id="statusFilter">
           <option value="">Todos los estados</option>
           <option>Vigente</option>
-          <option>Proximo a vencer</option>
-          <option>Vencido</option>
-          <option>Pendiente</option>
-          <option>Sin programacion</option>
+          <option value="Proximo a vencer">Próximo a vencer</option>
+          <option value="Vencido">Vencido</option>
+          <option value="Pendiente">Reportado</option>
+          <option value="Sin programacion">Sin programación</option>
         </select>
       </div>
       <div id="equipmentList" class="equipment-grid"></div>
