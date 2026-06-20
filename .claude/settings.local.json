@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"python -c \\\\\"import sqlite3; db=sqlite3.connect\\(r'C:/Users/Usuario/Documents/Codex/2026-06-16/desarrolla-un-sistema-web-de-gesti/app/data/biomed.db'\\); print\\(db.execute\\('SELECT COUNT\\(*\\) FROM equipment'\\).fetchone\\(\\)[0]\\)\\\\\"\")"
+    ]
+  }
+}

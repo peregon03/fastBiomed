@@ -168,16 +168,17 @@ def read_equipment(conn: sqlite3.Connection, query: dict | None = None) -> list[
 def dashboard() -> dict:
     with connect() as conn:
         equipment = read_equipment(conn)
-        history = conn.execute("SELECT performed_at FROM maintenance_history ORDER BY performed_at").fetchall()
+        history = conn.execute("SELECT equipment_id, performed_at FROM maintenance_history ORDER BY performed_at").fetchall()
     total = len(equipment)
-    scheduled = sum(1 for item in equipment if item["next_maintenance"])
-    completed = len(history)
+    scheduled = sum(1 for item in equipment if status_for(item["next_maintenance"], item["pending_intervention"]) == "Vigente")
+    completed_ids = set(h["equipment_id"] for h in history)
+    completed = sum(1 for item in equipment if item["id"] in completed_ids)
     overdue = sum(1 for item in equipment if item["status"] == "Vencido")
     due_soon = sum(1 for item in equipment if item["status"] == "Proximo a vencer")
     no_schedule = sum(1 for item in equipment if item["status"] == "Sin programacion")
     pending = sum(1 for item in equipment if item["status"] == "Pendiente")
     denominator = completed + overdue + due_soon + pending
-    compliance = round((completed / denominator) * 100, 1) if denominator else 100
+    compliance = round((completed / denominator) * 100, 1) if denominator > 0 else 0
 
     status_counts: dict[str, int] = {}
     area_counts = {area: 0 for area in AREAS}

@@ -101,13 +101,14 @@ async function queryHistory() {
 function buildDashboard(allEquipment, history) {
   const total = allEquipment.length;
   const scheduled = allEquipment.filter((item) => item.status === 'Vigente').length;
-  const completed = history.length;
+  const completedIds = new Set(history.map(h => h.equipment_id));
+  const completed = allEquipment.filter(item => completedIds.has(item.id)).length;
   const overdue = allEquipment.filter((item) => item.status === 'Vencido').length;
   const dueSoon = allEquipment.filter((item) => item.status === 'Proximo a vencer').length;
   const noSchedule = allEquipment.filter((item) => item.status === 'Sin programacion').length;
   const pending = allEquipment.filter((item) => item.status === 'Pendiente').length;
   const denominator = completed + overdue + dueSoon + pending;
-  const compliance = denominator ? Math.round((completed / denominator) * 1000) / 10 : 100;
+  const compliance = denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0;
   const statusCounts = {};
   const areaCounts = { UCI: 0, Urgencias: 0, Cirugia: 0 };
   const monthlyCompleted = {};
