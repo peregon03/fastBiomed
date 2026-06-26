@@ -203,7 +203,7 @@ function renderKpiDetail() {
     dueSoon: 'Próximos a vencer',
     overdue: 'Equipos vencidos',
     noSchedule: 'Equipos sin programar',
-    completed: 'Mantenimientos realizados',
+    vigente: 'Equipos vigentes',
     thisMonth: 'Realizados este mes',
   };
   const title = labels[type] || '';
@@ -228,21 +228,19 @@ function renderKpiDetail() {
     return;
   }
 
-  if (type === 'completed') {
-    const records = state.history;
-    const rows = records.map(h => {
-      const eq = state.allEquipment.find(e => e.id === h.equipment_id);
-      return `<div class="kpi-detail-item">
+  if (type === 'vigente') {
+    const items = state.allEquipment.filter(e => e.status === 'Vigente');
+    const rows = items.map(item => `
+      <div class="kpi-detail-item">
         <div>
-          <strong>${eq?.name || '—'}</strong>
-          <div class="meta-line">${eq ? areaLabel(eq.area) + ' · ' + eq.plate : ''} · Realizado: ${h.performed_at}</div>
+          <strong>${item.name}</strong>
+          <div class="meta-line">${areaLabel(item.area)} · ${item.plate} · Próximo: ${item.next_maintenance}</div>
         </div>
-        <span class="status Vigente">Realizado</span>
-      </div>`;
-    }).join('');
+        ${badge(item.status)}
+      </div>`).join('');
     panel.innerHTML = `
-      <div class="panel-head"><h2>${title}</h2><span class="pill">${records.length} registros</span></div>
-      ${records.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>No hay registros de mantenimiento.</p>'}
+      <div class="panel-head"><h2>${title}</h2><span class="pill">${items.length} equipos</span></div>
+      ${items.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>No hay equipos vigentes.</p>'}
     `;
     return;
   }
@@ -310,7 +308,7 @@ function renderDashboard() {
   const noScheduleCard = $('#kpiNoSchedule').closest('article');
   noScheduleCard.hidden = data.totals.noSchedule === 0;
   $('#kpiNoSchedule').textContent = data.totals.noSchedule;
-  $('#kpiCompleted').textContent = data.totals.completed;
+  $('#kpiCompleted').textContent = data.statusCounts['Vigente'] || 0;
   $('#kpiThisMonth').textContent = data.totals.completedThisMonth;
   $('#kpiCompliance').textContent = `${data.totals.compliance}%`;
   $('#alertCount').textContent = `${data.alerts.length} alertas`;
