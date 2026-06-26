@@ -689,9 +689,11 @@ async function importFile(file) {
   let imported = 0;
   const errors = [];
   for (const item of payload) {
-    const { error } = await supabaseClient.from('equipment').insert(item);
-    if (error) errors.push(`${item.plate}: ${error.message}`);
-    else imported++;
+    const { error } = await supabaseClient.from('equipment').upsert(item, { onConflict: 'plate' });
+    if (error) {
+      console.error('Supabase upsert error:', JSON.stringify(error));
+      errors.push(`${item.plate}: [${error.code}] ${error.message}${error.details ? ' — ' + error.details : ''}`);
+    } else imported++;
   }
   if (errors.length) throw new Error(`${imported} importados. Errores:\n` + errors.join('\n'));
   return imported;
