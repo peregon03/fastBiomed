@@ -729,17 +729,24 @@ async function importFile(file) {
 
   if (!payload.length) throw new Error('No se encontraron filas válidas para importar.');
 
-  let imported = 0;
+  // Obtener placas existentes para distinguir inserts de updates
+  const { data: existingData } = await supabaseClient.from('equipment').select('plate');
+  const existingPlates = new Set((existingData || []).map(r => r.plate));
+
+  let inserted = 0;
+  let updated = 0;
   const errors = [];
   for (const item of payload) {
+    const isNew = !existingPlates.has(item.plate);
     const { error } = await supabaseClient.from('equipment').upsert(item, { onConflict: 'plate' });
     if (error) {
       console.error('Supabase upsert error:', JSON.stringify(error));
       errors.push(`${item.plate}: [${error.code}] ${error.message}${error.details ? ' — ' + error.details : ''}`);
-    } else imported++;
+    } else if (isNew) inserted++;
+    else updated++;
   }
-  if (errors.length) throw new Error(`${imported} importados. Errores:\n` + errors.join('\n'));
-  return imported;
+  if (errors.length) throw new Error(`${inserted + updated} procesados (${inserted} nuevos, ${updated} actualizados). Errores:\n` + errors.join('\n'));
+  return { inserted, updated };
 }
 
 function exportExcel() {
@@ -896,8 +903,8 @@ function wireEvents() {
       return;
     }
     try {
-      const imported = await importFile(file);
-      $('#importResult').textContent = `Importados: ${imported}`;
+      const { inserted, updated } = await importFile(file);
+      $('#importResult').textContent = `${inserted + updated} procesados — ${inserted} nuevos, ${updated} actualizados.`;
       await refresh();
     } catch (error) {
       $('#importResult').textContent = error.message;
