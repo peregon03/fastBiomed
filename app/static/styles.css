@@ -142,6 +142,23 @@ nav, .area-filter {
   border-top: 1px solid #334155;
 }
 
+.sub-area-filter {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #1e293b;
+}
+
+.sub-area-filter #subAreaButtons {
+  display: grid;
+  gap: 4px;
+}
+
+.sub-area-filter button {
+  font-size: 12px;
+  padding: 5px 10px;
+  opacity: .85;
+}
+
 .area-filter span {
   color: #cbd5e1;
   font-size: 13px;
@@ -644,6 +661,12 @@ pre {
     width: auto;
     flex: 0 0 auto;
     text-align: center;
+  }
+  .sub-area-filter #subAreaButtons {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
   }
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }

@@ -213,9 +213,12 @@ def read_equipment(conn: sqlite3.Connection, query: dict | None = None) -> list[
     if query.get("area"):
         clauses.append("area = ?")
         args.append(query["area"])
+    if query.get("sub_area"):
+        clauses.append("specific_location = ?")
+        args.append(query["sub_area"])
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
-    sql += " ORDER BY area, name"
+    sql += " ORDER BY area, specific_location, name"
     rows = [row_to_equipment(r) for r in conn.execute(sql, args).fetchall()]
     if query.get("status"):
         rows = [r for r in rows if r["status"] == query["status"]]

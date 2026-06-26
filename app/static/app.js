@@ -5,6 +5,7 @@ const supabaseClient = hasSupabaseConfig ? window.supabase?.createClient(cfg.url
 const state = {
   view: 'dashboard',
   area: '',
+  subArea: '',
   status: '',
   search: '',
   equipment: [],
@@ -81,8 +82,9 @@ function badge(status) {
 }
 
 async function queryEquipment() {
-  let query = supabaseClient.from('equipment').select('*').order('area').order('name');
+  let query = supabaseClient.from('equipment').select('*').order('area').order('specific_location').order('name');
   if (state.area) query = query.eq('area', state.area);
+  if (state.subArea) query = query.eq('specific_location', state.subArea);
   const { data, error } = await query;
   if (error) throw error;
   const rows = (data || []).map(enrich);
@@ -140,12 +142,45 @@ function buildDashboard(allEquipment, history) {
   };
 }
 
+function renderSubAreaFilter() {
+  const container = $('#subAreaFilter');
+  const buttonsEl = $('#subAreaButtons');
+  if (!state.area) {
+    container.hidden = true;
+    return;
+  }
+  // Obtener sub-áreas distintas del área activa (solo las que tienen specific_location)
+  const subAreas = [...new Set(
+    state.allEquipment
+      .filter(e => e.area === state.area && e.specific_location)
+      .map(e => e.specific_location)
+  )].sort();
+
+  if (!subAreas.length) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  buttonsEl.innerHTML = [
+    `<button class="${!state.subArea ? 'active' : ''}" data-sub="">Todas</button>`,
+    ...subAreas.map(s =>
+      `<button class="${state.subArea === s ? 'active' : ''}" data-sub="${s}">${s}</button>`
+    ),
+  ].join('');
+  buttonsEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.subArea = btn.dataset.sub;
+      await refresh();
+    });
+  });
+}
+
 async function refresh() {
   assertConfigured();
   const [filteredEquipment, history, allRows] = await Promise.all([
     queryEquipment(),
     queryHistory(),
-    supabaseClient.from('equipment').select('*').order('area').order('name'),
+    supabaseClient.from('equipment').select('*').order('area').order('specific_location').order('name'),
   ]);
   if (allRows.error) throw allRows.error;
   const allEquipment = (allRows.data || []).map(enrich);
@@ -153,6 +188,7 @@ async function refresh() {
   state.history = history;
   state.allEquipment = allEquipment;
   state.dashboard = buildDashboard(allEquipment, history);
+  renderSubAreaFilter();
   renderDashboard();
   renderEquipment();
   renderCalendar();
@@ -795,6 +831,7 @@ function wireEvents() {
   $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
   $$('.area-filter button').forEach(btn => btn.addEventListener('click', async () => {
     state.area = btn.dataset.area;
+    state.subArea = '';
     $$('.area-filter button').forEach(item => item.classList.toggle('active', item === btn));
     await refresh();
   }));
