@@ -100,7 +100,7 @@ async function queryHistory() {
 
 function buildDashboard(allEquipment, history) {
   // KPIs solo sobre equipos con mantenimiento preventivo
-  const equipment = allEquipment.filter(item => item.requires_maintenance);
+  const equipment = allEquipment.filter(item => item.requires_maintenance !== false);
   const inventoryOnly = allEquipment.length - equipment.length;
 
   const total = equipment.length;
@@ -658,8 +658,20 @@ async function importFile(file) {
     const workbook = XLSX.read(buffer, { type: 'array' });
     workbook.SheetNames.forEach(sheetName => {
       const sheetArea = normalizeArea(sheetName.trim()) || null;
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
-      rows.forEach(row => allRows.push({ row, sheetArea }));
+      const ws = workbook.Sheets[sheetName];
+      // Convertir a array de arrays para detectar la fila de cabeceras
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      // Buscar la fila que contiene 'NOMBRE' o 'SERIE' (cabecera real)
+      const headerIdx = raw.findIndex(row =>
+        row.some(cell => ['nombre','serie','placa'].includes(String(cell).trim().toLowerCase()))
+      );
+      if (headerIdx === -1) return; // hoja sin datos reconocibles
+      const headers = raw[headerIdx].map(c => String(c).trim().toLowerCase());
+      raw.slice(headerIdx + 1).forEach(cells => {
+        const row = {};
+        headers.forEach((h, i) => { row[h] = cells[i] ?? ''; });
+        allRows.push({ row, sheetArea });
+      });
     });
   } else {
     const text = new TextDecoder('utf-8').decode(buffer);
