@@ -112,11 +112,7 @@ function buildDashboard(allEquipment, history) {
   const overdue = equipment.filter((item) => item.status === 'Vencido').length;
   const dueSoon = equipment.filter((item) => item.status === 'Proximo a vencer').length;
   const noSchedule = equipment.filter((item) => item.status === 'Sin programacion').length + inventoryOnly;
-  const todayStr = todayDate().toISOString().slice(0, 10);
-  const thisMonth = todayStr.slice(0, 7);
-  const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
-  const denominator = completed + overdue + dueSoon;
-  const compliance = denominator > 0 ? Math.round((completed / denominator) * 1000) / 10 : 0;
+  const compliance = scheduled > 0 ? Math.round(((scheduled - overdue) / scheduled) * 1000) / 10 : 0;
   const statusCounts = {};
   const areaCounts = { UCI: 0, Urgencias: 0, Cirugia: 0 };
   const monthlyCompleted = {};
@@ -133,7 +129,7 @@ function buildDashboard(allEquipment, history) {
   );
   const unscheduled = equipment.filter((item) => item.status === 'Sin programacion');
   return {
-    totals: { equipment: total, inventoryOnly, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule },
+    totals: { equipment: total, inventoryOnly, scheduled, dueSoon, overdue, completed, compliance, noSchedule },
     statusCounts,
     areaCounts,
     monthlyCompleted,
@@ -204,29 +200,9 @@ function renderKpiDetail() {
     overdue: 'Equipos vencidos',
     noSchedule: 'Equipos sin programar',
     vigente: 'Equipos vigentes',
-    thisMonth: 'Realizados este mes',
   };
   const title = labels[type] || '';
 
-  if (type === 'thisMonth') {
-    const filterKey = todayDate().toISOString().slice(0, 7);
-    const records = state.history.filter(h => h.performed_at.startsWith(filterKey));
-    const rows = records.map(h => {
-      const eq = state.allEquipment.find(e => e.id === h.equipment_id);
-      return `<div class="kpi-detail-item">
-        <div>
-          <strong>${eq?.name || '—'}</strong>
-          <div class="meta-line">${eq ? areaLabel(eq.area) + ' · ' + eq.plate : ''} · Realizado: ${h.performed_at}</div>
-        </div>
-        <span class="status Vigente">Realizado</span>
-      </div>`;
-    }).join('');
-    panel.innerHTML = `
-      <div class="panel-head"><h2>${title}</h2><span class="pill">${records.length} registros</span></div>
-      ${records.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>No hay registros en este período.</p>'}
-    `;
-    return;
-  }
 
   if (type === 'vigente') {
     const items = state.allEquipment.filter(e => e.status === 'Vigente');
@@ -330,7 +306,6 @@ function renderDashboard() {
   noScheduleCard.hidden = data.totals.noSchedule === 0;
   $('#kpiNoSchedule').textContent = data.totals.noSchedule;
   $('#kpiCompleted').textContent = data.statusCounts['Vigente'] || 0;
-  $('#kpiThisMonth').textContent = data.totals.completedThisMonth;
   $('#kpiCompliance').textContent = `${data.totals.compliance}%`;
   $('#alertCount').textContent = `${data.alerts.length} alertas`;
   $('#alerts').innerHTML = data.alerts.length ? data.alerts.map(item => `
