@@ -99,13 +99,17 @@ async function queryHistory() {
 }
 
 function buildDashboard(allEquipment, history) {
-  const total = allEquipment.length;
-  const scheduled = allEquipment.filter((item) => item.next_maintenance && item.status !== 'Vencido').length;
+  // KPIs solo sobre equipos con mantenimiento preventivo
+  const equipment = allEquipment.filter(item => item.requires_maintenance);
+  const inventoryOnly = allEquipment.length - equipment.length;
+
+  const total = equipment.length;
+  const scheduled = equipment.filter((item) => item.next_maintenance && item.status !== 'Vencido').length;
   const completedIds = new Set(history.map(h => h.equipment_id));
-  const completed = allEquipment.filter(item => completedIds.has(item.id)).length;
-  const overdue = allEquipment.filter((item) => item.status === 'Vencido').length;
-  const dueSoon = allEquipment.filter((item) => item.status === 'Proximo a vencer').length;
-  const noSchedule = allEquipment.filter((item) => item.status === 'Sin programacion').length;
+  const completed = equipment.filter(item => completedIds.has(item.id)).length;
+  const overdue = equipment.filter((item) => item.status === 'Vencido').length;
+  const dueSoon = equipment.filter((item) => item.status === 'Proximo a vencer').length;
+  const noSchedule = equipment.filter((item) => item.status === 'Sin programacion').length;
   const todayStr = todayDate().toISOString().slice(0, 10);
   const thisMonth = todayStr.slice(0, 7);
   const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
@@ -114,7 +118,7 @@ function buildDashboard(allEquipment, history) {
   const statusCounts = {};
   const areaCounts = { UCI: 0, Urgencias: 0, Cirugia: 0 };
   const monthlyCompleted = {};
-  allEquipment.forEach((item) => {
+  equipment.forEach((item) => {
     statusCounts[item.status] = (statusCounts[item.status] || 0) + 1;
     areaCounts[item.area] = (areaCounts[item.area] || 0) + 1;
   });
@@ -122,12 +126,12 @@ function buildDashboard(allEquipment, history) {
     const key = item.performed_at.slice(0, 7);
     monthlyCompleted[key] = (monthlyCompleted[key] || 0) + 1;
   });
-  const alerts = allEquipment.filter((item) =>
+  const alerts = equipment.filter((item) =>
     ['Vencido', 'Proximo a vencer'].includes(item.status)
   );
-  const unscheduled = allEquipment.filter((item) => item.status === 'Sin programacion');
+  const unscheduled = equipment.filter((item) => item.status === 'Sin programacion');
   return {
-    totals: { equipment: total, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule },
+    totals: { equipment: total, inventoryOnly, scheduled, dueSoon, overdue, completed, completedThisMonth, compliance, noSchedule },
     statusCounts,
     areaCounts,
     monthlyCompleted,
@@ -315,7 +319,7 @@ function renderDashboard() {
 
 function drawBarChart(canvas, values, colors) {
   const ctx = canvas.getContext('2d');
-  const width = canvas.clientWidth || 420;
+  const width = (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || canvas.getAttribute('data-width') || 420;
   const height = Number(canvas.getAttribute('height'));
   canvas.width = width * devicePixelRatio;
   canvas.height = height * devicePixelRatio;
@@ -344,27 +348,35 @@ function drawBarChart(canvas, values, colors) {
 function renderEquipment() {
   const term = state.search.toLowerCase();
   const items = state.equipment.filter(item => {
-    return [item.name, item.plate, item.serial_number, item.location, item.area]
-      .join(' ')
+    return [item.name, item.plate, item.serial_number, item.location,
+            item.specific_location, item.area, item.brand, item.model]
+      .filter(Boolean).join(' ')
       .toLowerCase()
       .includes(term);
   });
-  $('#equipmentList').innerHTML = items.map(item => `
-    <article class="equipment-card" data-id="${item.id}">
+  $('#equipmentList').innerHTML = items.map(item => {
+    const locationLine = [areaLabel(item.area), item.specific_location || item.location].filter(Boolean).join(' · ');
+    const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
+    const hasMaint = item.requires_maintenance;
+    return `
+    <article class="equipment-card${hasMaint ? '' : ' inventory-only'}" data-id="${item.id}">
       <div>
         <h3>${item.name}</h3>
-        <p>${areaLabel(item.area)} · ${item.location}</p>
+        <p>${locationLine}</p>
+        ${brandModel ? `<p class="brand-model">${brandModel}</p>` : ''}
       </div>
-      ${badge(item.status)}
+      ${hasMaint ? badge(item.status) : '<span class="status inventory">Solo inventario</span>'}
       <div class="meta">
         <span>Placa</span><strong>${item.plate}</strong>
         <span>Serie</span><strong>${item.serial_number}</strong>
+        ${hasMaint ? `
         <span>Último</span><strong>${item.last_maintenance || 'Sin registro'}</strong>
         <span>Próximo</span><strong>${item.next_maintenance || 'Sin programación'}</strong>
         <span>Frecuencia</span><strong>${item.frequency_months} meses</strong>
+        ` : ''}
       </div>
-    </article>
-  `).join('') || '<p>No se encontraron equipos con los filtros actuales.</p>';
+    </article>`;
+  }).join('') || '<p>No se encontraron equipos con los filtros actuales.</p>';
   $$('.equipment-card').forEach(card => {
     card.addEventListener('click', () => openEquipment(card.dataset.id));
   });
@@ -491,14 +503,21 @@ function switchView(view) {
 }
 
 function openEquipment(id = null) {
-  const item = state.equipment.find(e => String(e.id) === String(id));
+  const item = state.allEquipment.find(e => String(e.id) === String(id));
   $('#equipmentId').value = item?.id || '';
   $('#formTitle').textContent = item ? 'Editar equipo' : 'Nuevo equipo';
   $('#name').value = item?.name || '';
   $('#plate').value = item?.plate || '';
   $('#serial_number').value = item?.serial_number || '';
+  $('#brand').value = item?.brand || '';
+  $('#model').value = item?.model || '';
+  $('#specific_location').value = item?.specific_location || '';
   $('#location').value = item?.location || '';
   $('#area').value = item?.area || 'UCI';
+  const req = item ? Boolean(item.requires_maintenance) : true;
+  $('#requires_maintenance').checked = req;
+  $('#maintenanceFields').hidden = !req;
+  $('#completeMaintenance').style.display = req ? '' : 'none';
   $('#last_maintenance').value = item?.last_maintenance || '';
   $('#frequency_months').value = item?.frequency_months || 6;
   $('#next_maintenance').value = item?.next_maintenance || '';
@@ -509,14 +528,19 @@ function openEquipment(id = null) {
 }
 
 function formPayload() {
-  const lastMaintenance = $('#last_maintenance').value || null;
-  const frequency = Number($('#frequency_months').value);
+  const req = $('#requires_maintenance').checked;
+  const lastMaintenance = req ? ($('#last_maintenance').value || null) : null;
+  const frequency = req ? Number($('#frequency_months').value) : 0;
   return {
     name: $('#name').value.trim(),
     plate: $('#plate').value.trim(),
     serial_number: $('#serial_number').value.trim(),
+    brand: $('#brand').value.trim() || null,
+    model: $('#model').value.trim() || null,
+    specific_location: $('#specific_location').value.trim() || null,
     location: $('#location').value.trim(),
     area: $('#area').value,
+    requires_maintenance: req,
     last_maintenance: lastMaintenance,
     next_maintenance: lastMaintenance ? addMonths(lastMaintenance, frequency) : null,
     frequency_months: frequency,
@@ -566,64 +590,122 @@ function normalizeArea(value) {
   return value;
 }
 
-function normalizeRow(row) {
+const MONTH_NAMES = ['enero','febrero','marzo','abril','mayo','junio',
+                     'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function normalizeRow(row, sheetArea = null) {
   const lookup = {};
   Object.keys(row).forEach((key) => {
     lookup[String(key).trim().toLowerCase()] = row[key];
   });
-  const frequencyRaw = String(lookup.frecuencia || lookup.frequency_months || '6').toLowerCase();
+
+  // Área: prioridad hoja > columna
+  const areaRaw = sheetArea || lookup['área'] || lookup['area'] || '';
+  const area = normalizeArea(areaRaw);
+
+  // requires_maintenance
+  const reqRaw = String(lookup['requiere mantenimiento preventivo'] || lookup['requiere mantenimiento'] || lookup['requiere'] || 'SI').trim().toUpperCase();
+  const requires = ['SI', 'SÍ', 'S', '1', 'YES', 'TRUE'].includes(reqRaw);
+
+  // frequency
+  const frequencyRaw = String(lookup['frecuencia mantenimiento'] || lookup.frecuencia || lookup.frequency_months || '6').toLowerCase();
+  const frequency = !requires ? 0 : (frequencyRaw.includes('12') || frequencyRaw.includes('anual') ? 12 : 6);
+
+  // fechas
   const lastMaintenance = lookup['ultimo mantenimiento'] || lookup['último mantenimiento'] || lookup.last_maintenance || null;
-  const nextMaintenance = lookup['proximo mantenimiento'] || lookup['próximo mantenimiento'] || lookup.next_maintenance || null;
+  let nextMaintenance = lookup['proximo mantenimiento'] || lookup['próximo mantenimiento'] || lookup.next_maintenance || null;
+
+  // Derivar next_maintenance desde columnas de mes (ENERO…DICIEMBRE con 'x')
+  if (requires && !nextMaintenance) {
+    const today = new Date();
+    const currentMonth = today.getMonth(); // 0-indexed
+    const currentYear = today.getFullYear();
+    const markedMonths = MONTH_NAMES
+      .map((m, i) => ({ i, val: String(lookup[m] || '').trim().toLowerCase() }))
+      .filter(({ val }) => val === 'x');
+    const future = markedMonths.filter(({ i }) => i >= currentMonth);
+    const target = future.length ? future[0] : (markedMonths.length ? markedMonths[markedMonths.length - 1] : null);
+    if (target) {
+      const year = future.length ? currentYear : currentYear + 1;
+      nextMaintenance = `${year}-${String(target.i + 1).padStart(2, '0')}-01`;
+    }
+  }
+
+  const specificLocation = String(lookup['ubicación'] || lookup['ubicacion'] || '').trim();
+
   return {
-    name: String(lookup['nombre del equipo'] || lookup.nombre || lookup.equipo || '').trim(),
-    plate: String(lookup.placa || '').trim(),
-    serial_number: String(lookup['número de serie'] || lookup['numero de serie'] || lookup.serial || '').trim(),
-    location: String(lookup['ubicación'] || lookup.ubicacion || '').trim(),
-    area: normalizeArea(lookup['área'] || lookup.area || ''),
-    last_maintenance: lastMaintenance,
-    next_maintenance: nextMaintenance || (lastMaintenance ? addMonths(lastMaintenance, frequencyRaw.includes('12') || frequencyRaw.includes('anual') ? 12 : 6) : null),
-    frequency_months: frequencyRaw.includes('12') || frequencyRaw.includes('anual') ? 12 : 6,
+    name: String(lookup['nombre del equipo'] || lookup['nombre'] || lookup['equipo'] || '').trim(),
+    plate: String(lookup['placa'] || '').trim(),
+    serial_number: String(lookup['número de serie'] || lookup['numero de serie'] || lookup['serie'] || lookup['serial'] || '').trim(),
+    brand: String(lookup['marca'] || lookup['brand'] || '').trim() || null,
+    model: String(lookup['modelo'] || lookup['model'] || '').trim() || null,
+    specific_location: specificLocation || null,
+    location: specificLocation || area || '',
+    area,
+    requires_maintenance: requires,
+    last_maintenance: lastMaintenance || null,
+    next_maintenance: nextMaintenance || (lastMaintenance ? addMonths(lastMaintenance, frequency) : null),
+    frequency_months: frequency,
     pending_intervention: false,
   };
 }
 
 async function importFile(file) {
   const buffer = await file.arrayBuffer();
-  let rows = [];
+  let allRows = [];
+
   if (file.name.toLowerCase().endsWith('.xlsx')) {
     const workbook = XLSX.read(buffer, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    workbook.SheetNames.forEach(sheetName => {
+      const sheetArea = normalizeArea(sheetName.trim()) || null;
+      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+      rows.forEach(row => allRows.push({ row, sheetArea }));
+    });
   } else {
     const text = new TextDecoder('utf-8').decode(buffer);
     const workbook = XLSX.read(text, { type: 'string', raw: true });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: '' });
+    rows.forEach(row => allRows.push({ row, sheetArea: null }));
   }
-  const payload = rows.map(normalizeRow).filter(row => row.name && row.plate && row.serial_number && row.location && row.area);
+
+  const payload = allRows
+    .map(({ row, sheetArea }) => normalizeRow(row, sheetArea))
+    .filter(r => r.name && r.plate);
+
   if (!payload.length) throw new Error('No se encontraron filas válidas para importar.');
-  const { error } = await supabaseClient.from('equipment').insert(payload);
-  if (error) throw error;
-  return payload.length;
+
+  let imported = 0;
+  const errors = [];
+  for (const item of payload) {
+    const { error } = await supabaseClient.from('equipment').insert(item);
+    if (error) errors.push(`${item.plate}: ${error.message}`);
+    else imported++;
+  }
+  if (errors.length) throw new Error(`${imported} importados. Errores:\n` + errors.join('\n'));
+  return imported;
 }
 
 function exportExcel() {
-  const headers = ['Equipo', 'Placa', 'Serie', 'Ubicación', 'Área', 'Último mantenimiento', 'Próximo mantenimiento', 'Frecuencia', 'Estado'];
-  const rows = state.equipment.map(item => [
+  const headers = ['Equipo', 'Placa', 'Serie', 'Marca', 'Modelo', 'Ubicación específica', 'Área',
+                   'Requiere mantenimiento', 'Último mantenimiento', 'Próximo mantenimiento', 'Frecuencia', 'Estado'];
+  const rows = state.allEquipment.map(item => [
     item.name,
     item.plate,
     item.serial_number,
-    item.location,
+    item.brand || '',
+    item.model || '',
+    item.specific_location || item.location,
     areaLabel(item.area),
+    item.requires_maintenance ? 'SI' : 'NO',
     item.last_maintenance || '',
     item.next_maintenance || '',
-    `${item.frequency_months} meses`,
-    statusLabel(item.status),
+    item.requires_maintenance ? `${item.frequency_months} meses` : '',
+    item.requires_maintenance ? statusLabel(item.status) : 'Solo inventario',
   ]);
   const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, 'Mantenimientos');
-  XLSX.writeFile(book, 'mantenimientos_biomedicos.xlsx');
+  XLSX.utils.book_append_sheet(book, sheet, 'Inventario biomédico');
+  XLSX.writeFile(book, 'inventario_biomedico.xlsx');
 }
 
 function exportPdf() {
@@ -712,6 +794,15 @@ function wireEvents() {
   });
   $('#newEquipment').addEventListener('click', () => openEquipment());
   $('#closeDialog').addEventListener('click', () => $('#equipmentDialog').close());
+  $('#requires_maintenance').addEventListener('change', () => {
+    const req = $('#requires_maintenance').checked;
+    $('#maintenanceFields').hidden = !req;
+    $('#completeMaintenance').style.display = req ? '' : 'none';
+    if (!req) {
+      $('#last_maintenance').value = '';
+      $('#next_maintenance').value = '';
+    }
+  });
   $('#last_maintenance').addEventListener('change', updateNextMaintenancePreview);
   $('#frequency_months').addEventListener('change', updateNextMaintenancePreview);
   $('#equipmentForm').addEventListener('submit', saveForm);

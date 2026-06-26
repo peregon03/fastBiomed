@@ -152,7 +152,7 @@
     <section id="datos" class="view">
       <div class="data-panel">
         <h2>Importar equipos desde Excel o CSV</h2>
-        <p>Columnas esperadas: Nombre del equipo, Placa, Número de serie, Ubicación, Área. Puede incluir fechas y frecuencia.</p>
+        <p>Columnas reconocidas: <strong>NOMBRE, PLACA, SERIE, MARCA, MODELO, UBICACIÓN, ÁREA, REQUIERE MANTENIMIENTO PREVENTIVO, FRECUENCIA MANTENIMIENTO, ENERO…DICIEMBRE</strong>. El archivo puede tener varias hojas (una por área).</p>
         <input id="importFile" type="file" accept=".csv,.xlsx">
         <button id="importBtn">Importar archivo</button>
         <pre id="importResult"></pre>
@@ -167,14 +167,32 @@
         <button type="button" id="closeDialog" class="icon-btn">×</button>
       </header>
       <input type="hidden" id="equipmentId">
+      <div class="form-section-label">Identificación</div>
       <label>Nombre del equipo<input id="name" required></label>
-      <label>Placa<input id="plate" required></label>
-      <label>Número de serie<input id="serial_number" required></label>
-      <label>Ubicación<input id="location" required></label>
-      <label>Área<select id="area" required><option>UCI</option><option>Urgencias</option><option>Cirugia</option></select></label>
-      <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
-      <label>Próximo mantenimiento<input id="next_maintenance" type="date" readonly></label>
-      <label>Frecuencia<select id="frequency_months"><option value="6">Cada 6 meses</option><option value="12">Cada 12 meses</option></select></label>
+      <div class="form-row">
+        <label>Placa<input id="plate" required></label>
+        <label>Número de serie<input id="serial_number" required></label>
+      </div>
+      <div class="form-row">
+        <label>Marca<input id="brand" placeholder="Opcional"></label>
+        <label>Modelo<input id="model" placeholder="Opcional"></label>
+      </div>
+      <div class="form-section-label">Ubicación</div>
+      <div class="form-row">
+        <label>Área<select id="area" required><option>UCI</option><option>Urgencias</option><option value="Cirugia">Cirugía</option></select></label>
+        <label>Ubicación específica<input id="specific_location" placeholder="Ej: Quirófano 2"></label>
+      </div>
+      <label>Ubicación general<input id="location" required placeholder="Sala, servicio o zona"></label>
+      <div class="form-section-label">Mantenimiento</div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="requires_maintenance" checked>
+        Requiere mantenimiento preventivo
+      </label>
+      <div id="maintenanceFields">
+        <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
+        <label>Próximo mantenimiento<input id="next_maintenance" type="date" readonly></label>
+        <label>Frecuencia<select id="frequency_months"><option value="6">Cada 6 meses</option><option value="12">Cada 12 meses</option></select></label>
+      </div>
       <footer>
         <button type="button" id="deleteEquipment" class="danger">Eliminar</button>
         <span></span>

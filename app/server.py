@@ -73,9 +73,13 @@ def init_db() -> None:
                 serial_number TEXT NOT NULL,
                 location TEXT NOT NULL,
                 area TEXT NOT NULL CHECK(area IN ('UCI', 'Urgencias', 'Cirugia')),
+                brand TEXT,
+                model TEXT,
+                specific_location TEXT,
+                requires_maintenance INTEGER NOT NULL DEFAULT 1,
                 last_maintenance TEXT,
                 next_maintenance TEXT,
-                frequency_months INTEGER NOT NULL CHECK(frequency_months IN (6, 12)),
+                frequency_months INTEGER NOT NULL DEFAULT 6,
                 pending_intervention INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -92,27 +96,80 @@ def init_db() -> None:
             );
             """
         )
+        migrate_db(conn)
         count = conn.execute("SELECT COUNT(*) FROM equipment").fetchone()[0]
         if count == 0 and SEED_DEMO:
             seed(conn)
 
 
+def migrate_db(conn: sqlite3.Connection) -> None:
+    """Migra bases de datos existentes al esquema actual sin perder datos."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(equipment)").fetchall()}
+    if "requires_maintenance" in existing:
+        return  # Ya migrado
+
+    # Reconstruir tabla para eliminar CHECK(frequency_months IN (6,12)) y agregar columnas nuevas.
+    # SQLite no permite DROP CONSTRAINT ni MODIFY COLUMN, por eso se usa la estrategia rename/copy/drop.
+    conn.executescript("""
+        PRAGMA foreign_keys = OFF;
+
+        CREATE TABLE equipment_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            plate TEXT NOT NULL UNIQUE,
+            serial_number TEXT NOT NULL,
+            location TEXT NOT NULL,
+            area TEXT NOT NULL CHECK(area IN ('UCI', 'Urgencias', 'Cirugia')),
+            brand TEXT,
+            model TEXT,
+            specific_location TEXT,
+            requires_maintenance INTEGER NOT NULL DEFAULT 1,
+            last_maintenance TEXT,
+            next_maintenance TEXT,
+            frequency_months INTEGER NOT NULL DEFAULT 6,
+            pending_intervention INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT INTO equipment_new
+            (id, name, plate, serial_number, location, area,
+             last_maintenance, next_maintenance, frequency_months,
+             pending_intervention, created_at, updated_at)
+        SELECT
+            id, name, plate, serial_number, location, area,
+            last_maintenance, next_maintenance, frequency_months,
+            pending_intervention, created_at, updated_at
+        FROM equipment;
+
+        DROP TABLE equipment;
+        ALTER TABLE equipment_new RENAME TO equipment;
+
+        PRAGMA foreign_keys = ON;
+    """)
+
+
 def seed(conn: sqlite3.Connection) -> None:
+    # (name, plate, serial_number, location, area, brand, model, specific_location,
+    #  requires_maintenance, last_maintenance, next_maintenance, frequency_months, pending_intervention)
     samples = [
-        ("Monitor multiparametro", "UCI-001", "SN-MON-9001", "Cubiculo 1", "UCI", "2026-02-10", "2026-08-10", 6, 0),
-        ("Ventilador mecanico", "UCI-002", "SN-VM-7821", "Cubiculo 3", "UCI", "2025-11-20", "2026-05-20", 6, 1),
-        ("Bomba de infusion", "UCI-003", "SN-BI-1220", "Estacion central", "UCI", "2026-01-05", "2027-01-05", 12, 0),
-        ("Desfibrilador", "URG-001", "SN-DES-3112", "Sala reanimacion", "Urgencias", "2025-12-01", "2026-06-01", 6, 0),
-        ("Electrocardiografo", "URG-002", "SN-ECG-8172", "Consultorio 2", "Urgencias", "2026-03-22", "2026-09-22", 6, 0),
-        ("Lampara cielitica", "CIR-001", "SN-LC-4400", "Quirofano 1", "Cirugia", "2025-09-15", "2026-09-15", 12, 0),
-        ("Maquina de anestesia", "CIR-002", "SN-AN-2318", "Quirofano 2", "Cirugia", None, None, 6, 0),
-        ("Mesa quirurgica", "CIR-003", "SN-MQ-6404", "Quirofano 3", "Cirugia", "2026-05-30", "2026-11-30", 6, 0),
+        ("Monitor multiparametro", "UCI-001", "SN-MON-9001", "Cubiculo 1", "UCI", "Mindray", "MEC-1200", "Cubículo 1", 1, "2026-02-10", "2026-08-10", 6, 0),
+        ("Ventilador mecanico", "UCI-002", "SN-VM-7821", "Cubiculo 3", "UCI", "Drager", "Evita 4", "Cubículo 3", 1, "2025-11-20", "2026-05-20", 6, 1),
+        ("Bomba de infusion", "UCI-003", "SN-BI-1220", "Estacion central", "UCI", "Baxter", "Colleague", "Estación central", 1, "2026-01-05", "2027-01-05", 12, 0),
+        ("Desfibrilador", "URG-001", "SN-DES-3112", "Sala reanimacion", "Urgencias", "Philips", "HeartStart", "Sala reanimación", 1, "2025-12-01", "2026-06-01", 6, 0),
+        ("Electrocardiografo", "URG-002", "SN-ECG-8172", "Consultorio 2", "Urgencias", "GE Healthcare", "MAC 5500", "Consultorio 2", 1, "2026-03-22", "2026-09-22", 6, 0),
+        ("Lampara cielitica", "CIR-001", "SN-LC-4400", "Quirofano 1", "Cirugia", "Mopec", "Mopec-500", "Quirófano 1", 1, "2025-09-15", "2026-09-15", 12, 0),
+        ("Maquina de anestesia", "CIR-002", "SN-AN-2318", "Quirofano 2", "Cirugia", "Drager", "Fabius GS", "Quirófano 2", 1, None, None, 6, 0),
+        ("Mesa quirurgica", "CIR-003", "SN-MQ-6404", "Quirofano 3", "Cirugia", "Trumpf", "Jupiter", "Quirófano 3", 1, "2026-05-30", "2026-11-30", 6, 0),
+        ("Flujometro de oxigeno", "UCI-004", "SN-FL-0041", "Cubiculo 4", "UCI", None, None, "Cubículo 4", 0, None, None, 0, 0),
+        ("Termometro digital", "URG-003", "SN-TM-0031", "Triaje", "Urgencias", None, None, "Sala de triaje", 0, None, None, 0, 0),
     ]
     conn.executemany(
         """
         INSERT INTO equipment
-        (name, plate, serial_number, location, area, last_maintenance, next_maintenance, frequency_months, pending_intervention)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (name, plate, serial_number, location, area, brand, model, specific_location,
+         requires_maintenance, last_maintenance, next_maintenance, frequency_months, pending_intervention)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         samples,
     )
@@ -167,8 +224,13 @@ def read_equipment(conn: sqlite3.Connection, query: dict | None = None) -> list[
 
 def dashboard() -> dict:
     with connect() as conn:
-        equipment = read_equipment(conn)
+        all_equipment = read_equipment(conn)
         history = conn.execute("SELECT equipment_id, performed_at FROM maintenance_history ORDER BY performed_at").fetchall()
+
+    # KPIs y alertas solo sobre equipos con mantenimiento preventivo
+    equipment = [e for e in all_equipment if e.get("requires_maintenance")]
+    inventory_only = len(all_equipment) - len(equipment)
+
     total = len(equipment)
     scheduled = sum(1 for item in equipment if item["next_maintenance"])
     completed_ids = set(h["equipment_id"] for h in history)
@@ -191,14 +253,15 @@ def dashboard() -> dict:
         key = row["performed_at"][:7]
         month_counts[key] = month_counts.get(key, 0) + 1
 
-    alerts = []
-    for item in equipment:
-        if item["status"] in ("Vencido", "Proximo a vencer", "Sin programacion", "Pendiente"):
-            alerts.append(item)
+    alerts = [
+        item for item in equipment
+        if item["status"] in ("Vencido", "Proximo a vencer", "Sin programacion", "Pendiente")
+    ]
 
     return {
         "totals": {
             "equipment": total,
+            "inventoryOnly": inventory_only,
             "scheduled": scheduled,
             "dueSoon": due_soon,
             "overdue": overdue,
@@ -233,15 +296,27 @@ def calendar_items(query: dict) -> list[dict]:
 
 
 def save_equipment(payload: dict, equipment_id: int | None = None) -> dict:
+    requires = payload.get("requires_maintenance")
+    requires_maintenance = 0 if str(requires).strip().lower() in ("0", "false", "no", "") and requires is not None and str(requires).strip() != "" else 1
+    # Si el campo llega como booleano Python o entero
+    if isinstance(requires, bool):
+        requires_maintenance = 1 if requires else 0
+    elif isinstance(requires, int):
+        requires_maintenance = 1 if requires else 0
+
     fields = {
         "name": payload.get("name", "").strip(),
         "plate": payload.get("plate", "").strip(),
         "serial_number": payload.get("serial_number", "").strip(),
         "location": payload.get("location", "").strip(),
         "area": payload.get("area", "").strip(),
+        "brand": (payload.get("brand") or "").strip() or None,
+        "model": (payload.get("model") or "").strip() or None,
+        "specific_location": (payload.get("specific_location") or "").strip() or None,
+        "requires_maintenance": requires_maintenance,
         "last_maintenance": payload.get("last_maintenance") or None,
         "next_maintenance": payload.get("next_maintenance") or None,
-        "frequency_months": int(payload.get("frequency_months") or 6),
+        "frequency_months": int(payload.get("frequency_months") or 0) if not requires_maintenance else int(payload.get("frequency_months") or 6),
         "pending_intervention": 1 if payload.get("pending_intervention") else 0,
     }
     missing = [k for k in ("name", "plate", "serial_number", "location", "area") if not fields[k]]
@@ -249,8 +324,8 @@ def save_equipment(payload: dict, equipment_id: int | None = None) -> dict:
         raise ValueError("Campos obligatorios incompletos: " + ", ".join(missing))
     if fields["area"] not in AREAS:
         raise ValueError("Area no valida")
-    if fields["frequency_months"] not in (6, 12):
-        raise ValueError("La frecuencia debe ser de 6 o 12 meses")
+    if fields["requires_maintenance"] and fields["frequency_months"] not in (6, 12):
+        raise ValueError("La frecuencia debe ser de 6 o 12 meses para equipos con mantenimiento")
 
     with connect() as conn:
         if equipment_id:
@@ -258,6 +333,8 @@ def save_equipment(payload: dict, equipment_id: int | None = None) -> dict:
                 """
                 UPDATE equipment SET
                 name=:name, plate=:plate, serial_number=:serial_number, location=:location, area=:area,
+                brand=:brand, model=:model, specific_location=:specific_location,
+                requires_maintenance=:requires_maintenance,
                 last_maintenance=:last_maintenance, next_maintenance=:next_maintenance,
                 frequency_months=:frequency_months, pending_intervention=:pending_intervention,
                 updated_at=CURRENT_TIMESTAMP
@@ -269,8 +346,10 @@ def save_equipment(payload: dict, equipment_id: int | None = None) -> dict:
             cur = conn.execute(
                 """
                 INSERT INTO equipment
-                (name, plate, serial_number, location, area, last_maintenance, next_maintenance, frequency_months, pending_intervention)
-                VALUES (:name, :plate, :serial_number, :location, :area, :last_maintenance, :next_maintenance,
+                (name, plate, serial_number, location, area, brand, model, specific_location,
+                 requires_maintenance, last_maintenance, next_maintenance, frequency_months, pending_intervention)
+                VALUES (:name, :plate, :serial_number, :location, :area, :brand, :model, :specific_location,
+                        :requires_maintenance, :last_maintenance, :next_maintenance,
                         :frequency_months, :pending_intervention)
                 """,
                 fields,
@@ -287,6 +366,10 @@ def complete_maintenance(equipment_id: int, payload: dict) -> dict:
         row = conn.execute("SELECT * FROM equipment WHERE id = ?", (equipment_id,)).fetchone()
         if not row:
             raise ValueError("Equipo no encontrado")
+        if not row["requires_maintenance"]:
+            raise ValueError("Este equipo no tiene mantenimiento preventivo programado")
+        if not row["frequency_months"]:
+            raise ValueError("El equipo no tiene frecuencia de mantenimiento definida")
         new_next = add_months(performed, int(row["frequency_months"]))
         conn.execute(
             """
@@ -308,68 +391,167 @@ def complete_maintenance(equipment_id: int, payload: dict) -> dict:
         return row_to_equipment(updated)
 
 
+MONTH_COLS = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+              "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+AREA_ALIASES = {
+    "uci": "UCI",
+    "urgencias": "Urgencias",
+    "urgencia": "Urgencias",
+    "cirugia": "Cirugia",
+    "cirugía": "Cirugia",
+    "cirug\u00eda": "Cirugia",
+    "cirujia": "Cirugia",
+}
+
+IMPORT_ALIASES = {
+    "nombre del equipo": "name",
+    "nombre": "name",
+    "equipo": "name",
+    "placa": "plate",
+    "número de serie": "serial_number",
+    "numero de serie": "serial_number",
+    "serie": "serial_number",
+    "serial": "serial_number",
+    "ubicación": "specific_location",
+    "ubicacion": "specific_location",
+    "área": "area",
+    "area": "area",
+    "marca": "brand",
+    "brand": "brand",
+    "modelo": "model",
+    "model": "model",
+    "ultimo mantenimiento": "last_maintenance",
+    "fecha del ultimo mantenimiento preventivo": "last_maintenance",
+    "proximo mantenimiento": "next_maintenance",
+    "fecha del proximo mantenimiento preventivo": "next_maintenance",
+    "frecuencia mantenimiento": "frequency_months",
+    "frecuencia": "frequency_months",
+    "requiere mantenimiento preventivo": "requires_maintenance",
+    "requiere mantenimiento": "requires_maintenance",
+    "requiere": "requires_maintenance",
+}
+
+
+def _parse_sheet_rows(ws: object, sheet_area: str | None = None) -> list[dict]:
+    """Extrae filas de una hoja openpyxl, incluyendo columnas de meses."""
+    all_rows = list(ws.iter_rows(values_only=True))
+    if not all_rows:
+        return []
+    headers = [str(c or "").strip().lower() for c in all_rows[0]]
+    result = []
+    for cells in all_rows[1:]:
+        row: dict = {headers[i]: cells[i] for i in range(min(len(headers), len(cells)))}
+        if sheet_area:
+            row["_sheet_area"] = sheet_area
+        # Detectar meses programados (x / X) y derivar next_maintenance
+        scheduled_months = [i for i, m in enumerate(MONTH_COLS) if headers.count(m) and str(row.get(m) or "").strip().lower() == "x"]
+        row["_scheduled_months"] = scheduled_months
+        result.append(row)
+    return result
+
+
+def _normalize_row(raw: dict, row_index: int) -> dict:
+    """Convierte una fila cruda al payload de save_equipment."""
+    normalized: dict = {}
+    for k, v in raw.items():
+        key = str(k or "").strip().lower()
+        mapped = IMPORT_ALIASES.get(key, key)
+        normalized[mapped] = v
+
+    # Área: prioridad sheet_area > columna area
+    area_raw = str(raw.get("_sheet_area") or normalized.get("area") or "").strip()
+    area = AREA_ALIASES.get(area_raw.lower(), area_raw)
+
+    # requires_maintenance
+    req_raw = str(normalized.get("requires_maintenance") or "SI").strip().upper()
+    requires = req_raw in ("SI", "S", "1", "TRUE", "YES", "SÍ")
+
+    # frequency_months
+    freq_raw = str(normalized.get("frequency_months") or "")
+    if not requires:
+        frequency = 0
+    elif "12" in freq_raw or "anual" in freq_raw.lower():
+        frequency = 12
+    else:
+        frequency = 6
+
+    # next_maintenance desde columnas de mes si no viene explícito
+    next_maint = normalized.get("next_maintenance") or None
+    last_maint = normalized.get("last_maintenance") or None
+    if requires and not next_maint:
+        scheduled = raw.get("_scheduled_months", [])
+        current_year = date.today().year
+        future = [m for m in scheduled if m + 1 >= date.today().month]
+        if future:
+            month_num = future[0] + 1
+            next_maint = f"{current_year}-{month_num:02d}-01"
+        elif scheduled:
+            month_num = scheduled[-1] + 1
+            next_maint = f"{current_year + 1}-{month_num:02d}-01"
+
+    # Limpiar None y strings vacíos
+    def clean(v: object) -> str | None:
+        s = str(v or "").strip()
+        return s or None
+
+    return {
+        "name": clean(normalized.get("name")),
+        "plate": clean(normalized.get("plate")),
+        "serial_number": clean(normalized.get("serial_number")),
+        "location": clean(normalized.get("specific_location") or normalized.get("location") or area),
+        "specific_location": clean(normalized.get("specific_location")),
+        "area": area,
+        "brand": clean(normalized.get("brand")),
+        "model": clean(normalized.get("model")),
+        "requires_maintenance": 1 if requires else 0,
+        "last_maintenance": clean(last_maint),
+        "next_maintenance": clean(next_maint),
+        "frequency_months": frequency,
+    }
+
+
 def import_rows(payload: dict) -> dict:
     filename = payload.get("filename", "").lower()
     content = base64.b64decode(payload.get("content", ""))
-    rows: list[dict] = []
+    raw_rows: list[dict] = []
+
     if filename.endswith(".xlsx"):
         try:
             import openpyxl  # type: ignore
         except Exception as exc:
             raise ValueError("Para importar XLSX instale openpyxl o cargue el archivo como CSV.") from exc
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-        ws = wb.active
-        headers = [str(c.value or "").strip().lower() for c in next(ws.iter_rows(max_row=1))]
-        for cells in ws.iter_rows(min_row=2, values_only=True):
-            rows.append({headers[i]: cells[i] for i in range(min(len(headers), len(cells)))})
+        for sheet_name in wb.sheetnames:
+            # Inferir área desde el nombre de la hoja
+            sheet_area = AREA_ALIASES.get(sheet_name.strip().lower())
+            raw_rows.extend(_parse_sheet_rows(wb[sheet_name], sheet_area))
     else:
         text = content.decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(text))
-        rows = [{(k or "").strip().lower(): v for k, v in row.items()} for row in reader]
+        raw_rows = [{(k or "").strip().lower(): v for k, v in row.items()} for row in reader]
 
-    aliases = {
-        "nombre del equipo": "name",
-        "nombre": "name",
-        "equipo": "name",
-        "placa": "plate",
-        "nÃºmero de serie": "serial_number",
-        "numero de serie": "serial_number",
-        "serial": "serial_number",
-        "ubicaciÃ³n": "location",
-        "ubicacion": "location",
-        "area": "area",
-        "Ã¡rea": "area",
-        "ultimo mantenimiento": "last_maintenance",
-        "fecha del ultimo mantenimiento preventivo": "last_maintenance",
-        "proximo mantenimiento": "next_maintenance",
-        "fecha del proximo mantenimiento preventivo": "next_maintenance",
-        "frecuencia": "frequency_months",
-    }
     imported = 0
+    skipped = 0
     errors: list[str] = []
-    for index, raw in enumerate(rows, start=2):
-        normalized = {aliases.get(str(k).lower(), str(k).lower()): v for k, v in raw.items()}
-        frequency = str(normalized.get("frequency_months") or "6")
-        frequency = 12 if "12" in frequency or "anual" in frequency.lower() else 6
-        area = str(normalized.get("area") or "").strip()
-        if area.lower() == "cirugÃ­a":
-            area = "Cirugia"
-        payload_row = {
-            "name": str(normalized.get("name") or "").strip(),
-            "plate": str(normalized.get("plate") or "").strip(),
-            "serial_number": str(normalized.get("serial_number") or "").strip(),
-            "location": str(normalized.get("location") or "").strip(),
-            "area": area,
-            "last_maintenance": normalized.get("last_maintenance") or None,
-            "next_maintenance": normalized.get("next_maintenance") or None,
-            "frequency_months": frequency,
-        }
+
+    for index, raw in enumerate(raw_rows, start=2):
         try:
-            save_equipment(payload_row)
+            row_payload = _normalize_row(raw, index)
+            # Omitir filas completamente vacías
+            if not row_payload["name"] and not row_payload["plate"]:
+                skipped += 1
+                continue
+            if not row_payload["plate"]:
+                errors.append(f"Fila {index}: sin placa — omitida")
+                skipped += 1
+                continue
+            save_equipment(row_payload)
             imported += 1
         except Exception as exc:
             errors.append(f"Fila {index}: {exc}")
-    return {"imported": imported, "errors": errors}
+
+    return {"imported": imported, "skipped": skipped, "errors": errors}
 
 
 def excel_report() -> bytes:
@@ -377,17 +559,21 @@ def excel_report() -> bytes:
         equipment = read_equipment(conn)
     rows = "".join(
         "<tr>"
-        f"<td>{e['name']}</td><td>{e['plate']}</td><td>{e['serial_number']}</td><td>{e['location']}</td>"
-        f"<td>{e['area']}</td><td>{e['last_maintenance'] or ''}</td><td>{e['next_maintenance'] or ''}</td>"
-        f"<td>{e['frequency_months']} meses</td><td>{e['status']}</td>"
+        f"<td>{e['name']}</td><td>{e['plate']}</td><td>{e['serial_number']}</td>"
+        f"<td>{e.get('brand') or ''}</td><td>{e.get('model') or ''}</td>"
+        f"<td>{e.get('specific_location') or e['location']}</td><td>{e['area']}</td>"
+        f"<td>{'SI' if e.get('requires_maintenance') else 'NO'}</td>"
+        f"<td>{e['last_maintenance'] or ''}</td><td>{e['next_maintenance'] or ''}</td>"
+        f"<td>{e['frequency_months'] if e.get('requires_maintenance') else ''}</td><td>{e['status']}</td>"
         "</tr>"
         for e in equipment
     )
     html = f"""
     <html><meta charset="utf-8"><body>
     <table border="1">
-    <tr><th>Equipo</th><th>Placa</th><th>Serie</th><th>Ubicacion</th><th>Area</th>
-    <th>Ultimo mantenimiento</th><th>Proximo mantenimiento</th><th>Frecuencia</th><th>Estado</th></tr>
+    <tr><th>Equipo</th><th>Placa</th><th>Serie</th><th>Marca</th><th>Modelo</th>
+    <th>Ubicacion especifica</th><th>Area</th><th>Requiere mantenimiento</th>
+    <th>Ultimo mantenimiento</th><th>Proximo mantenimiento</th><th>Frecuencia (meses)</th><th>Estado</th></tr>
     {rows}
     </table></body></html>
     """
