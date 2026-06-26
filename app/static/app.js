@@ -111,7 +111,7 @@ function buildDashboard(allEquipment, history) {
   const completed = equipment.filter(item => completedIds.has(item.id)).length;
   const overdue = equipment.filter((item) => item.status === 'Vencido').length;
   const dueSoon = equipment.filter((item) => item.status === 'Proximo a vencer').length;
-  const noSchedule = equipment.filter((item) => item.status === 'Sin programacion').length;
+  const noSchedule = equipment.filter((item) => item.status === 'Sin programacion').length + inventoryOnly;
   const todayStr = todayDate().toISOString().slice(0, 10);
   const thisMonth = todayStr.slice(0, 7);
   const completedThisMonth = history.filter(h => h.performed_at.slice(0, 7) === thisMonth).length;
@@ -263,7 +263,28 @@ function renderKpiDetail() {
     return;
   }
 
-  const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido', noSchedule: 'Sin programacion' };
+  if (type === 'noSchedule') {
+    const items = state.allEquipment.filter(e =>
+      e.status === 'Sin programacion' || e.requires_maintenance === false
+    );
+    const rows = items.map(item => `
+      <div class="kpi-detail-item">
+        <div>
+          <strong>${item.name}</strong>
+          <div class="meta-line">${areaLabel(item.area)} · ${item.plate}</div>
+        </div>
+        ${item.requires_maintenance === false
+          ? '<span class="status inventory">Solo inventario</span>'
+          : badge(item.status)}
+      </div>`).join('');
+    panel.innerHTML = `
+      <div class="panel-head"><h2>Sin programación</h2><span class="pill">${items.length} equipos</span></div>
+      ${items.length ? `<div class="kpi-detail-list">${rows}</div>` : '<p>Todos los equipos tienen programación.</p>'}
+    `;
+    return;
+  }
+
+  const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido' };
   const filterStatus = statusMap[type];
   const items = filterStatus
     ? state.allEquipment.filter(e => e.status === filterStatus)
