@@ -101,11 +101,11 @@ async function queryHistory() {
 }
 
 function buildDashboard(allEquipment, history) {
-  // KPIs solo sobre equipos con mantenimiento preventivo
+  // KPIs de cumplimiento solo sobre equipos con mantenimiento preventivo
   const equipment = allEquipment.filter(item => item.requires_maintenance !== false);
   const inventoryOnly = allEquipment.length - equipment.length;
 
-  const total = equipment.length;
+  const total = allEquipment.length; // total real del inventario completo
   const scheduled = equipment.filter((item) => item.next_maintenance && item.status !== 'Vencido').length;
   const completedIds = new Set(history.map(h => h.equipment_id));
   const completed = equipment.filter(item => completedIds.has(item.id)).length;
@@ -639,9 +639,10 @@ function normalizeRow(row, sheetArea = null) {
   const areaRaw = sheetArea || lookup['área'] || lookup['area'] || '';
   const area = normalizeArea(areaRaw);
 
-  // requires_maintenance
-  const reqRaw = String(lookup['requiere mantenimiento preventivo'] || lookup['requiere mantenimiento'] || lookup['requiere'] || 'SI').trim().toUpperCase();
-  const requires = ['SI', 'SÍ', 'S', '1', 'YES', 'TRUE'].includes(reqRaw);
+  // requires_maintenance — si la columna no existe en el archivo, se asume SI
+  const reqCol = lookup['requiere mantenimiento preventivo'] ?? lookup['requiere mantenimiento'] ?? lookup['requiere'] ?? null;
+  const reqRaw = String(reqCol === null ? 'SI' : reqCol).trim().toUpperCase();
+  const requires = !['NO', 'N', '0', 'FALSE'].includes(reqRaw); // todo lo que no sea explícitamente NO = true
 
   // frequency
   const frequencyRaw = String(lookup['frecuencia mantenimiento'] || lookup.frecuencia || lookup.frequency_months || '6').toLowerCase();
@@ -669,15 +670,21 @@ function normalizeRow(row, sheetArea = null) {
 
   const specificLocation = String(lookup['ubicación'] || lookup['ubicacion'] || '').trim();
 
+  const name = String(lookup['nombre del equipo'] || lookup['nombre'] || lookup['equipo'] || '').trim();
+  const serial = String(lookup['número de serie'] || lookup['numero de serie'] || lookup['serie'] || lookup['serial'] || '').trim();
+  const rawPlate = String(lookup['placa'] || '').trim();
+  // Fallback de placa: serie → "SIN-PLACA-{nombre truncado}"
+  const plate = rawPlate || serial || (name ? `SIN-PLACA-${name.slice(0, 20).replace(/\s+/g, '-').toUpperCase()}` : '');
+
   return {
-    name: String(lookup['nombre del equipo'] || lookup['nombre'] || lookup['equipo'] || '').trim(),
-    plate: String(lookup['placa'] || '').trim(),
-    serial_number: String(lookup['número de serie'] || lookup['numero de serie'] || lookup['serie'] || lookup['serial'] || '').trim(),
+    name: name || 'Sin nombre',
+    plate,
+    serial_number: serial || '',
     brand: String(lookup['marca'] || lookup['brand'] || '').trim() || null,
     model: String(lookup['modelo'] || lookup['model'] || '').trim() || null,
     specific_location: specificLocation || null,
-    location: specificLocation || area || '',
-    area,
+    location: specificLocation || area || 'Sin ubicación',
+    area: area || 'UCI', // fallback de área si no viene en el archivo
     requires_maintenance: requires,
     last_maintenance: lastMaintenance || null,
     next_maintenance: nextMaintenance || (lastMaintenance ? addMonths(lastMaintenance, frequency) : null),
@@ -718,7 +725,7 @@ async function importFile(file) {
 
   const payload = allRows
     .map(({ row, sheetArea }) => normalizeRow(row, sheetArea))
-    .filter(r => r.name && r.plate);
+    .filter(r => r.plate); // solo descarta filas donde no se pudo generar ningún identificador
 
   if (!payload.length) throw new Error('No se encontraron filas válidas para importar.');
 
