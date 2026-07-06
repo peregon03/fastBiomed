@@ -130,6 +130,27 @@ function buildDashboard(allEquipment, history, allEquipmentForAreaChart) {
     const key = item.performed_at.slice(0, 7);
     monthlyCompleted[key] = (monthlyCompleted[key] || 0) + 1;
   });
+
+  // Mantenimientos programados por mes del año actual (upcoming schedule)
+  const MONTH_ABBR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth(); // 0-indexed
+  const scheduledByMonth = Object.fromEntries(MONTH_ABBR.map(m => [m, 0]));
+  allEquipment.forEach(item => {
+    if (item.next_maintenance?.slice(0, 4) === String(currentYear)) {
+      const m = parseInt(item.next_maintenance.slice(5, 7)) - 1;
+      if (m >= 0 && m < 12) scheduledByMonth[MONTH_ABBR[m]]++;
+    }
+  });
+
+  // Distribución por frecuencia de mantenimiento
+  const freqCounts = { 'Semestral': 0, 'Anual': 0, 'Otro': 0 };
+  equipment.forEach(item => {
+    if (item.frequency_months === 6) freqCounts['Semestral']++;
+    else if (item.frequency_months === 12) freqCounts['Anual']++;
+    else freqCounts['Otro']++;
+  });
+
   const alerts = equipment.filter((item) =>
     ['Vencido', 'Proximo a vencer'].includes(item.status)
   );
@@ -139,6 +160,9 @@ function buildDashboard(allEquipment, history, allEquipmentForAreaChart) {
     statusCounts,
     areaCounts,
     monthlyCompleted,
+    scheduledByMonth,
+    freqCounts,
+    currentMonth,
     alerts,
     unscheduled,
   };
@@ -358,10 +382,18 @@ function renderDashboard() {
     'Vencido': '#ff5252',
     'Sin programacion': '#5a7090',
   });
-  drawBarChart($('#areaChart'), data.areaCounts, {
+  drawDoughnut($('#areaChart'), data.areaCounts, {
     'UCI': '#5c6bc0',
     'Urgencias': '#ef5350',
     'Cirugia': '#26c6da',
+  });
+  const yearEl = $('#monthlyYear');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+  drawMonthlyBar($('#monthlyChart'), data.scheduledByMonth, data.currentMonth);
+  drawDoughnut($('#freqChart'), data.freqCounts, {
+    'Semestral': '#00d4ff',
+    'Anual': '#00e676',
+    'Otro': '#ffd740',
   });
   renderAreaCards();
   if (state.activeKpi) renderKpiDetail();
@@ -387,6 +419,62 @@ function drawBarChart(canvas, values, colors) {
       scales: {
         x: { grid: { color: 'rgba(42,58,85,.5)' }, ticks: { color: '#8fa3c0', font: { size: 11 } } },
         y: { grid: { color: 'rgba(42,58,85,.5)' }, beginAtZero: true, ticks: { color: '#8fa3c0' } },
+      },
+    },
+  });
+}
+
+function drawDoughnut(canvas, values, colors) {
+  const id = canvas.id;
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+  const keys = Object.keys(values);
+  const AREA_LABELS = { UCI: 'UCI', Urgencias: 'Urgencias', Cirugia: 'Cirugía' };
+  const labels = keys.map(k => AREA_LABELS[k] || k);
+  const data = keys.map(k => values[k]);
+  const bgColors  = keys.map(k => (colors[k] || '#00d4ff') + 'cc');
+  const borderColors = keys.map(k => colors[k] || '#00d4ff');
+  _charts[id] = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#8fa3c0', padding: 14, font: { size: 12 }, boxWidth: 12 },
+        },
+      },
+    },
+  });
+}
+
+function drawMonthlyBar(canvas, monthlyCounts, currentMonth) {
+  const id = canvas.id;
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+  const keys = Object.keys(monthlyCounts);
+  const data = keys.map(k => monthlyCounts[k]);
+  const bgColors    = keys.map((_, i) => i === currentMonth ? '#00e676bb' : '#00d4ff33');
+  const borderColors = keys.map((_, i) => i === currentMonth ? '#00e676' : '#00d4ff88');
+  _charts[id] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: keys, datasets: [{ data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              return idx === currentMonth ? `${keys[idx]} (mes actual)` : keys[idx];
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { color: 'rgba(42,58,85,.5)' }, ticks: { color: '#8fa3c0', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(42,58,85,.5)' }, beginAtZero: true, ticks: { color: '#8fa3c0', stepSize: 1 } },
       },
     },
   });

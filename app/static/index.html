@@ -178,14 +178,25 @@
       <!-- Charts + Alerts -->
       <div class="dashboard-grid">
         <section class="panel">
-          <div class="panel-head"><h2>Estado de mantenimientos</h2></div>
+          <div class="panel-head"><h2>📊 Estado de mantenimientos</h2></div>
           <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
         </section>
         <section class="panel">
-          <div class="panel-head"><h2>Distribución por área</h2></div>
+          <div class="panel-head"><h2>🏥 Distribución por área</h2></div>
           <div class="chart-wrap"><canvas id="areaChart"></canvas></div>
         </section>
         <section class="panel wide">
+          <div class="panel-head">
+            <h2>📅 Mantenimientos programados por mes</h2>
+            <span class="pill pill-gray" id="monthlyYear"></span>
+          </div>
+          <div class="chart-wrap chart-wrap-tall"><canvas id="monthlyChart"></canvas></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>🔄 Distribución por frecuencia</h2></div>
+          <div class="chart-wrap"><canvas id="freqChart"></canvas></div>
+        </section>
+        <section class="panel">
           <div class="panel-head">
             <h2>🔔 Alertas automáticas</h2>
             <span id="alertCount" class="pill">0 alertas</span>

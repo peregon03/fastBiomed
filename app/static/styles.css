@@ -301,6 +301,7 @@ body.is-authenticated .main.app-shell{display:flex;}
   font-weight:700;color:var(--text);margin:0;
 }
 .chart-wrap{position:relative;height:200px;}
+.chart-wrap-tall{height:220px;}
 
 /* ── PILL / STATUS ──────────────────────────────────── */
 .pill,.status{
