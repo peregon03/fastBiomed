@@ -100,7 +100,7 @@ async function queryHistory() {
   return data || [];
 }
 
-function buildDashboard(allEquipment, history) {
+function buildDashboard(allEquipment, history, allEquipmentForAreaChart) {
   // KPIs de cumplimiento solo sobre equipos con mantenimiento preventivo
   const equipment = allEquipment.filter(item => item.requires_maintenance !== false);
   const inventoryOnly = allEquipment.length - equipment.length;
@@ -118,6 +118,12 @@ function buildDashboard(allEquipment, history) {
   const monthlyCompleted = {};
   equipment.forEach((item) => {
     statusCounts[item.status] = (statusCounts[item.status] || 0) + 1;
+  });
+  // Incluir equipos solo-inventario en el conteo de "Sin programacion" de la gráfica
+  statusCounts['Sin programacion'] = (statusCounts['Sin programacion'] || 0) + inventoryOnly;
+  // El gráfico de áreas siempre muestra todos los equipos para comparación
+  const areaSource = allEquipmentForAreaChart || allEquipment;
+  areaSource.forEach((item) => {
     areaCounts[item.area] = (areaCounts[item.area] || 0) + 1;
   });
   history.forEach((item) => {
@@ -183,7 +189,14 @@ async function refresh() {
   state.equipment = filteredEquipment;
   state.history = history;
   state.allEquipment = allEquipment;
-  state.dashboard = buildDashboard(allEquipment, history);
+  // Si hay filtro de área activo, el dashboard refleja solo ese área;
+  // el gráfico de áreas sigue mostrando todos para comparación.
+  const dashboardEquipment = state.area
+    ? allEquipment.filter(e =>
+        e.area === state.area &&
+        (!state.subArea || e.specific_location === state.subArea))
+    : allEquipment;
+  state.dashboard = buildDashboard(dashboardEquipment, history, allEquipment);
   renderSubAreaFilter();
   renderDashboard();
   renderEquipment();
@@ -193,6 +206,12 @@ async function refresh() {
 function renderKpiDetail() {
   const panel = $('#kpiDetail');
   const type = state.activeKpi;
+  // Equipos base respetando el filtro de área/subárea activo
+  const baseEquipment = state.area
+    ? state.allEquipment.filter(e =>
+        e.area === state.area &&
+        (!state.subArea || e.specific_location === state.subArea))
+    : state.allEquipment;
   const labels = {
     total: 'Todos los equipos',
     scheduled: 'Equipos programados',
@@ -205,7 +224,7 @@ function renderKpiDetail() {
 
 
   if (type === 'vigente') {
-    const items = state.allEquipment.filter(e => e.status === 'Vigente');
+    const items = baseEquipment.filter(e => e.status === 'Vigente');
     const rows = items.map(item => `
       <div class="kpi-detail-item">
         <div>
@@ -222,7 +241,7 @@ function renderKpiDetail() {
   }
 
   if (type === 'scheduled') {
-    const items = state.allEquipment.filter(e => e.next_maintenance);
+    const items = baseEquipment.filter(e => e.next_maintenance);
     const rows = items.map(item => `
       <div class="kpi-detail-item">
         <div>
@@ -240,7 +259,7 @@ function renderKpiDetail() {
   }
 
   if (type === 'noSchedule') {
-    const items = state.allEquipment.filter(e =>
+    const items = baseEquipment.filter(e =>
       e.status === 'Sin programacion' || e.requires_maintenance === false
     );
     const rows = items.map(item => `
@@ -263,8 +282,8 @@ function renderKpiDetail() {
   const statusMap = { total: null, dueSoon: 'Proximo a vencer', overdue: 'Vencido' };
   const filterStatus = statusMap[type];
   const items = filterStatus
-    ? state.allEquipment.filter(e => e.status === filterStatus)
-    : state.allEquipment;
+    ? baseEquipment.filter(e => e.status === filterStatus)
+    : baseEquipment;
 
   const rows = items.map(item => `
     <div class="kpi-detail-item">
