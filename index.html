@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioMed Track — Clínica San Francisco</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #111827;
+  --bg3: #1a2236;
+  --bg4: #1e2d44;
+  --border: #2a3a55;
+  --text: #e8edf5;
+  --text2: #8fa3c0;
+  --text3: #5a7090;
+  --accent: #00d4ff;
+  --accent2: #0099cc;
+  --green: #00e676;
+  --green-bg: rgba(0,230,118,0.08);
+  --yellow: #ffd740;
+  --yellow-bg: rgba(255,215,64,0.08);
+  --red: #ff5252;
+  --red-bg: rgba(255,82,82,0.08);
+  --uci: #5c6bc0;
+  --uci-light: rgba(92,107,192,0.15);
+  --cir: #26c6da;
+  --cir-light: rgba(38,198,218,0.15);
+  --urg: #ef5350;
+  --urg-light: rgba(239,83,80,0.15);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── LAYOUT ─── */
+.app { display:flex; height:100vh; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0;
+  position: relative;
+  z-index: 10;
+  transition: var(--transition);
+}
+
+.sidebar-logo {
+  padding: 0 24px 28px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo .logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--accent), #0066ff);
+  border-radius: 12px;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 20px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+}
+.sidebar-logo h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.sidebar-logo p {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.sidebar-nav { padding: 20px 12px; flex: 1; }
+.nav-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text3);
+  padding: 0 12px;
+  margin: 16px 0 8px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+  text-decoration: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: rgba(0,212,255,0.08); color: var(--accent); border-color: rgba(0,212,255,0.2); }
+.nav-item .nav-icon { font-size: 17px; width: 22px; text-align:center; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: white;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 700;
+}
+
+.area-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+/* ─── MAIN ─── */
+.main { flex:1; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; }
+
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  flex: 1;
+}
+.topbar-search {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  width: 240px;
+  outline: none;
+  transition: var(--transition);
+}
+.topbar-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+.topbar-search::placeholder { color: var(--text3); }
+
+.btn {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  display:flex; align-items:center; gap:7px;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { background: #33ddff; transform: translateY(-1px); }
+.btn-outline { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,82,82,0.3); }
+.btn-danger:hover { background: rgba(255,82,82,0.15); }
+.btn-success { background: var(--green-bg); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+.btn-success:hover { background: rgba(0,230,118,0.15); }
+
+/* ─── PAGE CONTENT ─── */
+.page { padding: 32px; display:none; }
+.page.active { display:block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ─── KPI CARDS ─── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.kpi-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+}
+.kpi-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-card::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:3px;
+  background: var(--accent-kpi, var(--accent));
+}
+.kpi-card .kpi-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+  display: block;
+}
+.kpi-card .kpi-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent-kpi, var(--accent));
+}
+.kpi-card .kpi-label {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.kpi-card .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+/* ─── GRID ─── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px; }
+
+/* ─── PANEL ─── */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.panel-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  display:flex; align-items:center; gap:8px;
+}
+.panel-body { padding: 20px; }
+
+/* ─── ALERTS ─── */
+.alerts-list { display:flex; flex-direction:column; gap:8px; }
+.alert-item {
+  display:flex; align-items:center; gap:12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.alert-item:hover { transform: translateX(4px); }
+.alert-item.danger { background: var(--red-bg); border-color: rgba(255,82,82,0.25); color: #ff8a80; }
+.alert-item.warning { background: var(--yellow-bg); border-color: rgba(255,215,64,0.25); color: #ffe57f; }
+.alert-item.info { background: rgba(0,212,255,0.05); border-color: rgba(0,212,255,0.2); color: #80d8ff; }
+.alert-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.alert-item.danger .alert-dot { background: var(--red); }
+.alert-item.warning .alert-dot { background: var(--yellow); }
+.alert-item.info .alert-dot { background: var(--accent); }
+.alert-count { margin-left:auto; font-weight:700; font-size:14px; }
+
+/* ─── EQUIPMENT TABLE ─── */
+.equip-filters {
+  display:flex; gap:10px; align-items:center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.filter-btn.active, .filter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+.filter-btn.area-uci.active { border-color: var(--uci); color: var(--uci); background: var(--uci-light); }
+.filter-btn.area-cir.active { border-color: var(--cir); color: var(--cir); background: var(--cir-light); }
+.filter-btn.area-urg.active { border-color: var(--urg); color: var(--urg); background: var(--urg-light); }
+
+.equip-table-wrap { overflow-x: auto; }
+.equip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.equip-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.equip-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(42,58,85,0.5);
+  color: var(--text);
+  vertical-align: middle;
+}
+.equip-table tr:hover td { background: var(--bg3); }
+.equip-table tr { cursor: pointer; transition: var(--transition); }
+
+.status-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-vigente { background: var(--green-bg); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+.status-proximo { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(255,215,64,0.3); }
+.status-vencido { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,82,82,0.3); }
+.status-sin-prog { background: rgba(90,112,144,0.15); color: var(--text3); border: 1px solid var(--border); }
+
+.area-badge {
+  display:inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.area-uci { background: var(--uci-light); color: var(--uci); }
+.area-cirugia { background: var(--cir-light); color: var(--cir); }
+.area-urgencias { background: var(--urg-light); color: var(--urg); }
+
+/* ─── CALENDAR ─── */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.cal-month {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  transition: var(--transition);
+}
+.cal-month:hover { border-color: var(--accent); }
+.cal-month-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.cal-month.current-month .cal-month-name { color: var(--accent); }
+.cal-month.current-month { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.04); }
+.cal-count { font-family:'Syne',sans-serif; font-size:22px; font-weight:800; }
+.cal-tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+.cal-tag {
+  font-size:10px; padding:2px 7px; border-radius:10px; font-weight:600;
+}
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  display:none;
+  position:fixed; inset:0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 600px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalIn 0.25s ease;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.modal-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; }
+.modal-close { background:none; border:none; color:var(--text2); cursor:pointer; font-size:20px; transition:var(--transition); }
+.modal-close:hover { color:var(--red); }
+.modal-body { padding: 24px; }
+.modal-footer { padding: 16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+
+/* ─── FORM ─── */
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-group { display:flex; flex-direction:column; gap:6px; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:11px; text-transform:uppercase; letter-spacing:0.7px; color:var(--text3); font-weight:600; }
+.form-input {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: var(--transition);
+  width: 100%;
+}
+.form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+.form-input option { background: var(--bg2); }
+
+/* ─── EQUIPMENT DETAIL ─── */
+.equip-detail-grid {
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+}
+.detail-field { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+.detail-field-label { font-size:10px; text-transform:uppercase; letter-spacing:0.7px; color:var(--text3); margin-bottom:4px; }
+.detail-field-value { font-size:14px; font-weight:500; color:var(--text); }
+.month-schedule { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.month-pill {
+  padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600;
+  background:var(--bg3); border:1px solid var(--border); color:var(--text3);
+}
+.month-pill.scheduled { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--accent); }
+.month-pill.current-m { background:rgba(0,230,118,0.1); border-color:rgba(0,230,118,0.3); color:var(--green); }
+
+/* ─── PROGRESS BAR ─── */
+.progress-bar { background:var(--bg3); border-radius:20px; height:8px; overflow:hidden; margin-top:4px; }
+.progress-fill { height:100%; border-radius:20px; background: linear-gradient(90deg, var(--accent), #0066ff); transition:width 0.6s ease; }
+.progress-fill.green { background:linear-gradient(90deg,var(--green),#00bcd4); }
+.progress-fill.yellow { background:linear-gradient(90deg,var(--yellow),#ff9800); }
+.progress-fill.red { background:linear-gradient(90deg,var(--red),#ff1744); }
+
+/* ─── AREA CARDS ─── */
+.area-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:28px; }
+.area-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:24px; cursor:pointer; transition:var(--transition); position:relative; overflow:hidden;
+}
+.area-card::after {
+  content:''; position:absolute; top:-20px; right:-20px;
+  width:80px; height:80px; border-radius:50%;
+  background:var(--area-color); opacity:0.07;
+}
+.area-card:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
+.area-card:hover { border-color:var(--area-color); }
+.area-card.uci { --area-color: var(--uci); }
+.area-card.cirugia { --area-color: var(--cir); }
+.area-card.urgencias { --area-color: var(--urg); }
+.area-card-icon { font-size:28px; margin-bottom:12px; }
+.area-card-name { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; margin-bottom:6px; color:var(--area-color); }
+.area-card-stats { font-size:12px; color:var(--text2); }
+.area-card-stats span { font-weight:700; color:var(--text); }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+/* ─── CHART CONTAINER ─── */
+.chart-container { position:relative; height:220px; }
+
+/* ─── PAGINATION ─── */
+.pagination { display:flex; align-items:center; gap:6px; margin-top:16px; justify-content:flex-end; }
+.page-btn {
+  width:32px; height:32px; border-radius:var(--radius-sm);
+  background:var(--bg3); border:1px solid var(--border); color:var(--text2);
+  cursor:pointer; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+  transition:var(--transition); display:flex; align-items:center; justify-content:center;
+}
+.page-btn:hover, .page-btn.active { background:rgba(0,212,255,0.1); border-color:var(--accent); color:var(--accent); }
+.page-info { font-size:12px; color:var(--text3); padding:0 8px; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width:1100px) {
+  .grid-3 { grid-template-columns:1fr 1fr; }
+  .calendar-grid { grid-template-columns:repeat(3,1fr); }
+  .area-cards { grid-template-columns:1fr; }
+}
+@media (max-width:768px) {
+  .sidebar { width:220px; min-width:220px; }
+  .page { padding:16px; }
+  .grid-2, .grid-3 { grid-template-columns:1fr; }
+  .calendar-grid { grid-template-columns:repeat(2,1fr); }
+  .form-grid { grid-template-columns:1fr; }
+  .equip-detail-grid { grid-template-columns:1fr; }
+  .kpi-grid { grid-template-columns:repeat(2,1fr); }
+  .topbar { padding:12px 16px; }
+  .topbar-search { width:160px; }
+}
+@media (max-width:560px) {
+  .app { flex-direction:column; }
+  .sidebar { width:100%; min-width:0; flex-direction:row; padding:12px; overflow-x:auto; }
+  .sidebar-logo { display:none; }
+  .sidebar-nav { display:flex; flex-direction:row; padding:0; }
+  .sidebar-footer { display:none; }
+  .nav-section-label { display:none; }
+  .nav-item { white-space:nowrap; padding:8px 12px; }
+  .main { height:calc(100vh - 80px); }
+}
+
+/* ─── TOAST ─── */
+.toast-container { position:fixed; bottom:24px; right:24px; z-index:2000; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:12px 18px; font-size:13px; color:var(--text);
+  box-shadow:var(--shadow); animation:toastIn 0.3s ease;
+  display:flex; align-items:center; gap:10px;
+  min-width:240px; max-width:360px;
+}
+.toast.success { border-color:rgba(0,230,118,0.4); }
+.toast.error { border-color:rgba(255,82,82,0.4); }
+@keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+/* ─── EMPTY STATE ─── */
+.empty-state {
+  text-align:center; padding:60px 20px; color:var(--text3);
+}
+.empty-state .empty-icon { font-size:48px; margin-bottom:12px; opacity:0.5; }
+.empty-state p { font-size:14px; }
+
+/* Import section */
+.import-area {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 32px; text-align: center; cursor: pointer; transition: var(--transition);
+  background: var(--bg3);
+}
+.import-area:hover { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+.import-area .import-icon { font-size: 36px; margin-bottom: 10px; display:block; }
+.import-area p { color: var(--text2); font-size:14px; }
+.import-area small { color: var(--text3); font-size:12px; }
+
+/* CHECKBOX */
+input[type=checkbox] { accent-color: var(--accent); }
+
+/* TOOLTIP */
+[data-tooltip] { position:relative; }
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position:absolute; bottom:calc(100%+6px); left:50%; transform:translateX(-50%);
+  background:var(--bg4); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:5px 10px; font-size:11px; color:var(--text); white-space:nowrap; z-index:100;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">⚕️</div>
+    <h1>BioMed Track</h1>
+    <p>Clínica San Francisco</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('equipos')">
+      <span class="nav-icon">🔧</span> Equipos
+      <span class="nav-badge" id="badge-vencidos">0</span>
+    </div>
+    <div class="nav-item" onclick="showPage('calendario')">
+      <span class="nav-icon">📅</span> Calendario
+    </div>
+    <div class="nav-section-label">Áreas</div>
+    <div class="nav-item" onclick="showAreaPage('UCI')">
+      <span class="area-dot" style="background:var(--uci)"></span> UCI
+    </div>
+    <div class="nav-item" onclick="showAreaPage('CIRUGIA')">
+      <span class="area-dot" style="background:var(--cir)"></span> Cirugía
+    </div>
+    <div class="nav-item" onclick="showAreaPage('URGENCIAS')">
+      <span class="area-dot" style="background:var(--urg)"></span> Urgencias
+    </div>
+    <div class="nav-section-label">Gestión</div>
+    <div class="nav-item" onclick="openAddModal()">
+      <span class="nav-icon">➕</span> Agregar Equipo
+    </div>
+    <div class="nav-item" onclick="showPage('importar')">
+      <span class="nav-icon">📥</span> Importar Excel
+    </div>
+    <div class="nav-item" onclick="exportReport()">
+      <span class="nav-icon">📤</span> Exportar Reporte
+    </div>
+    <div class="nav-item" onclick="showPage('sin_mp')">
+      <span class="nav-icon">📁</span> Sin Mantenimiento
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div>© 2026 Clínica San Francisco</div>
+    <div style="margin-top:2px" id="last-update">Cargando datos...</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="page-title">Dashboard</span>
+    <input class="topbar-search" type="text" placeholder="🔍  Buscar equipos..." oninput="searchEquipment(this.value)" id="search-input">
+    <button class="btn btn-outline" onclick="showPage('importar')">📥 Importar</button>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Equipo</button>
+  </div>
+
+  <!-- ═══ DASHBOARD PAGE ═══ -->
+  <div class="page active" id="page-dashboard">
+    <div class="kpi-grid">
+      <div class="kpi-card" style="--accent-kpi:var(--accent)">
+        <span class="kpi-icon">🏥</span>
+        <div class="kpi-value" id="kpi-total">0</div>
+        <div class="kpi-label">Total Equipos (con MP)</div>
+        <div class="kpi-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi-card" style="--accent-kpi:var(--green)">
+        <span class="kpi-icon">✅</span>
+        <div class="kpi-value" id="kpi-vigente">0</div>
+        <div class="kpi-label">Vigentes</div>
+        <div class="kpi-sub">Mantenimiento al día</div>
+      </div>
+      <div class="kpi-card" style="--accent-kpi:var(--yellow)">
+        <span class="kpi-icon">⚠️</span>
+        <div class="kpi-value" id="kpi-proximo">0</div>
+        <div class="kpi-label">Próx. a Vencer</div>
+        <div class="kpi-sub">En los próximos 30 días</div>
+      </div>
+      <div class="kpi-card" style="--accent-kpi:var(--red)">
+        <span class="kpi-icon">🚨</span>
+        <div class="kpi-value" id="kpi-vencido">0</div>
+        <div class="kpi-label">Vencidos</div>
+        <div class="kpi-sub">Requieren atención</div>
+      </div>
+      <div class="kpi-card" style="--accent-kpi:#ab47bc">
+        <span class="kpi-icon">📋</span>
+        <div class="kpi-value" id="kpi-sin-prog">0</div>
+        <div class="kpi-label">Sin Programar</div>
+        <div class="kpi-sub">Sin fecha asignada</div>
+      </div>
+      <div class="kpi-card" style="--accent-kpi:#26c6da">
+        <span class="kpi-icon">📈</span>
+        <div class="kpi-value" id="kpi-cumplimiento">0%</div>
+        <div class="kpi-label">Cumplimiento</div>
+        <div class="kpi-sub" id="kpi-cumplimiento-sub"></div>
+      </div>
+    </div>
+
+    <!-- Area Cards -->
+    <div class="area-cards">
+      <div class="area-card uci" onclick="showAreaPage('UCI')">
+        <div class="area-card-icon">🏥</div>
+        <div class="area-card-name">UCI</div>
+        <div class="area-card-stats"><span id="stat-uci-total">0</span> equipos con MP · <span id="stat-uci-vencidos" style="color:var(--red)">0</span> vencidos</div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="prog-uci" style="width:0%"></div></div>
+      </div>
+      <div class="area-card cirugia" onclick="showAreaPage('CIRUGIA')">
+        <div class="area-card-icon">🔪</div>
+        <div class="area-card-name">Cirugía</div>
+        <div class="area-card-stats"><span id="stat-cir-total">0</span> equipos con MP · <span id="stat-cir-vencidos" style="color:var(--red)">0</span> vencidos</div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="prog-cir" style="width:0%"></div></div>
+      </div>
+      <div class="area-card urgencias" onclick="showAreaPage('URGENCIAS')">
+        <div class="area-card-icon">🚑</div>
+        <div class="area-card-name">Urgencias</div>
+        <div class="area-card-stats"><span id="stat-urg-total">0</span> equipos con MP · <span id="stat-urg-vencidos" style="color:var(--red)">0</span> vencidos</div>
+        <div class="progress-bar" style="margin-top:10px"><div class="progress-fill" id="prog-urg" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Alerts -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔔 Alertas Activas</div>
+          <button class="btn btn-outline" style="font-size:11px;padding:5px 10px" onclick="showPage('equipos')">Ver todos</button>
+        </div>
+        <div class="panel-body">
+          <div class="alerts-list" id="alerts-list">
+            <div style="color:var(--text3);font-size:13px;">Cargando alertas...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 Estado por Área</div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-container">
+            <canvas id="chartEstado"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">📅 Mantenimientos por Mes</div></div>
+        <div class="panel-body">
+          <div class="chart-container">
+            <canvas id="chartMeses"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🔧 Distribución por Frecuencia</div></div>
+        <div class="panel-body">
+          <div class="chart-container">
+            <canvas id="chartFrecuencia"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EQUIPOS PAGE ═══ -->
+  <div class="page" id="page-equipos">
+    <div class="equip-filters">
+      <button class="filter-btn active" onclick="filterArea('TODOS',this)">Todos</button>
+      <button class="filter-btn area-uci" onclick="filterArea('UCI',this)">🏥 UCI</button>
+      <button class="filter-btn area-cir" onclick="filterArea('CIRUGIA',this)">🔪 Cirugía</button>
+      <button class="filter-btn area-urg" onclick="filterArea('URGENCIAS',this)">🚑 Urgencias</button>
+      <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+      <button class="filter-btn" onclick="filterStatus('TODOS',this)">Todos estados</button>
+      <button class="filter-btn" onclick="filterStatus('vigente',this)" style="color:var(--green)">✅ Vigente</button>
+      <button class="filter-btn" onclick="filterStatus('proximo',this)" style="color:var(--yellow)">⚠️ Próximo</button>
+      <button class="filter-btn" onclick="filterStatus('vencido',this)" style="color:var(--red)">🚨 Vencido</button>
+      <button class="filter-btn" onclick="filterStatus('sin_prog',this)">📋 Sin programar</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="equip-count">0 equipos</span>
+    </div>
+    <div class="panel">
+      <div class="equip-table-wrap">
+        <table class="equip-table">
+          <thead>
+            <tr>
+              <th>Nombre</th><th>Placa</th><th>Serie</th><th>Área</th>
+              <th>Ubicación</th><th>Marca / Modelo</th><th>Próx. Mant.</th>
+              <th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="equip-tbody"></tbody>
+        </table>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border)">
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CALENDAR PAGE ═══ -->
+  <div class="page" id="page-calendario">
+    <div class="equip-filters" style="margin-bottom:20px">
+      <button class="filter-btn active" onclick="filterCalArea('TODOS',this)">Todos</button>
+      <button class="filter-btn area-uci" onclick="filterCalArea('UCI',this)">🏥 UCI</button>
+      <button class="filter-btn area-cir" onclick="filterCalArea('CIRUGIA',this)">🔪 Cirugía</button>
+      <button class="filter-btn area-urg" onclick="filterCalArea('URGENCIAS',this)">🚑 Urgencias</button>
+    </div>
+    <div class="calendar-grid" id="calendar-grid"></div>
+  </div>
+
+  <!-- ═══ AREA PAGE ═══ -->
+  <div class="page" id="page-area">
+    <div class="equip-filters">
+      <button class="filter-btn" onclick="filterStatus('TODOS',this)">Todos estados</button>
+      <button class="filter-btn" onclick="filterStatus('vigente',this)" style="color:var(--green)">✅ Vigente</button>
+      <button class="filter-btn" onclick="filterStatus('proximo',this)" style="color:var(--yellow)">⚠️ Próximo</button>
+      <button class="filter-btn" onclick="filterStatus('vencido',this)" style="color:var(--red)">🚨 Vencido</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="area-equip-count">0 equipos</span>
+    </div>
+    <div class="panel">
+      <div class="equip-table-wrap">
+        <table class="equip-table">
+          <thead>
+            <tr>
+              <th>Nombre</th><th>Placa</th><th>Serie</th>
+              <th>Ubicación</th><th>Marca / Modelo</th><th>Próx. Mant.</th>
+              <th>Frecuencia</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="area-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ IMPORTAR PAGE ═══ -->
+  <div class="page" id="page-importar">
+    <div class="panel" style="max-width:600px">
+      <div class="panel-header"><div class="panel-title">📥 Importar desde Excel</div></div>
+      <div class="panel-body">
+        <div class="import-area" onclick="document.getElementById('file-input').click()">
+          <span class="import-icon">📊</span>
+          <p><strong>Clic para seleccionar archivo Excel</strong></p>
+          <small>Formatos soportados: .xlsx, .xls</small>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
+        <div style="margin-top:16px;font-size:13px;color:var(--text2)">
+          <strong>Formato esperado:</strong> El archivo debe tener columnas NOMBRE, SERIE, PLACA, UBICACIÓN, ÁREA, FRECUENCIA MANTENIMIENTO, MARCA, MODELO y meses (ENERO–DICIEMBRE) marcados con X.
+        </div>
+        <div id="import-result" style="margin-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SIN MANTENIMIENTO PAGE ═══ -->
+  <div class="page" id="page-sin_mp">
+    <div style="margin-bottom:16px">
+      <div style="background:rgba(90,112,144,0.1);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text2)">
+        📁 Esta sección contiene equipos que <strong>no requieren mantenimiento preventivo</strong>. Son equipos de monitoreo, almacenaje u otros que no tienen programación de MP.
+      </div>
+    </div>
+    <div class="equip-filters">
+      <button class="filter-btn active" onclick="filterSinMpArea('TODOS',this)">Todos</button>
+      <button class="filter-btn area-uci" onclick="filterSinMpArea('UCI',this)">🏥 UCI</button>
+      <button class="filter-btn area-cir" onclick="filterSinMpArea('CIRUGIA',this)">🔪 Cirugía</button>
+      <button class="filter-btn area-urg" onclick="filterSinMpArea('URGENCIAS',this)">🚑 Urgencias</button>
+      <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="sin-mp-count">0 equipos</span>
+    </div>
+    <div class="panel">
+      <div class="equip-table-wrap">
+        <table class="equip-table">
+          <thead>
+            <tr>
+              <th>Nombre</th><th>Placa</th><th>Serie</th><th>Área</th>
+              <th>Ubicación</th><th>Marca</th><th>Modelo</th>
+            </tr>
+          </thead>
+          <tbody id="sin-mp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ═══ MODAL EQUIPO ═══ -->
+<div class="modal-overlay" id="modal-equipo">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-equipo-title">Detalle del Equipo</div>
+      <button class="modal-close" onclick="closeModal('modal-equipo')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-equipo-body"></div>
+    <div class="modal-footer" id="modal-equipo-footer"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL ADD/EDIT ═══ -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-add-title">Agregar Equipo</div>
+      <button class="modal-close" onclick="closeModal('modal-add')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Nombre del Equipo</label>
+          <input class="form-input" id="f-nombre" type="text" placeholder="Ej: DESFIBRILADOR">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Placa</label>
+          <input class="form-input" id="f-placa" type="text" placeholder="Ej: 12345">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Serie</label>
+          <input class="form-input" id="f-serie" type="text" placeholder="Ej: ABC-123">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Área</label>
+          <select class="form-input" id="f-area">
+            <option value="UCI">UCI</option>
+            <option value="CIRUGIA">Cirugía</option>
+            <option value="URGENCIAS">Urgencias</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ubicación</label>
+          <input class="form-input" id="f-ubicacion" type="text" placeholder="Ej: UCI ADULTOS">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marca</label>
+          <input class="form-input" id="f-marca" type="text" placeholder="Ej: MINDRAY">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo</label>
+          <input class="form-input" id="f-modelo" type="text" placeholder="Ej: BeneHeart D3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frecuencia (meses)</label>
+          <select class="form-input" id="f-frecuencia">
+            <option value="6">Semestral (6 meses)</option>
+            <option value="12">Anual (12 meses)</option>
+            <option value="3">Trimestral (3 meses)</option>
+            <option value="1">Mensual (1 mes)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Requiere MP</label>
+          <select class="form-input" id="f-requiere">
+            <option value="true">Sí</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Meses Programados</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="f-meses-checks">
+          </div>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Último Mantenimiento (fecha)</label>
+          <input class="form-input" id="f-ultimo" type="date">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEquipo()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════
+const MONTHS = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const MONTH_NUM = {ENERO:1,FEBRERO:2,MARZO:3,ABRIL:4,MAYO:5,JUNIO:6,JULIO:7,AGOSTO:8,SEPTIEMBRE:9,OCTUBRE:10,NOVIEMBRE:11,DICIEMBRE:12};
+const NOW = new Date();
+const CUR_MONTH = NOW.getMonth() + 1;
+const CUR_YEAR = NOW.getFullYear();
+
+// Embed the equipment data directly
+const RAW_MP = [{"serie":"EZ-13057579","placa":"13733","nombre":"DESFIBRILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["FEBRERO","AGOSTO"],"area":"UCI"},{"serie":"EL-54020215","placa":"7964","nombre":"DESFIBRILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"EL-54013661","placa":"4451","nombre":"DESFIBRILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"10101","placa":"5049","nombre":"DESFIBRILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"EZ-13068099","placa":"13734","nombre":"DESFIBRILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["FEBRERO","AGOSTO"],"area":"UCI"},{"serie":"440593WX2","placa":"8029","nombre":"ECOGRAFO","ubicacion":"UCI ADULTOS","marca":"general electric","modelo":"logiq e","frecuencia":0,"requiere_mp":true,"meses_programados":["SEPTIEMBRE"],"area":"UCI"},{"serie":"IQ2050022","placa":"13735","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"UCI ADULTOS","marca":"EDAN","modelo":"SE-1515","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"IQ2050016","placa":"13736","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"UCI ADULTOS","marca":"EDAN","modelo":"SE-1515","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"HM220524120","placa":"10592","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"UCI ADULTOS","marca":"EDAN","modelo":"SE-3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"HM220524048","placa":"13750","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"UCI ADULTOS","marca":"EDAN","modelo":"SE-3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"UCI"},{"serie":"CTL4A089601","placa":"nan","nombre":"MODULO","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA96012132","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA13032871","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA0B028740","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102501","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"PENLON","modelo":"SPM5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"KCL9A023996","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA3A073176","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"PENLON","modelo":"SPM5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA19039184","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"PENLON","modelo":"SPM5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA13032897","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA13032924","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"PENLON","modelo":"SPM5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA0B028741","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA13032925","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"KCL9A023997","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"KLC9A023995","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102494","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA96012032","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA3A073172","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102496","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA86002253","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102499","placa":"nan","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102505","placa":"7912","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTA0B028732","placa":"0","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"CTL81102493","placa":"nan","nombre":"MODULO","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"EW-39005622","placa":"11016","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"UCI"},{"serie":"GB-74003152","placa":"12283","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-74003153","placa":"12282","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-74003154","placa":"12285","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-13040261","placa":"13763","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"SV-300","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-13040260","placa":"13764","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"SV-300","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-13040263","placa":"13765","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"SV-300","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"GB-13040258","placa":"13766","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"SV-300","modelo":"SV-300","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO"],"area":"UCI"},{"serie":"EZ-10011037","placa":"12288","nombre":"BOMBA DE INFUSION","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SK-500II","frecuencia":12,"requiere_mp":true,"meses_programados":["MAYO"],"area":"UCI"},{"serie":"EZ-10011036","placa":"12289","nombre":"BOMBA DE INFUSION","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SK-500II","frecuencia":12,"requiere_mp":true,"meses_programados":["MAYO"],"area":"UCI"},{"serie":"EZ-10010906","placa":"12290","nombre":"BOMBA DE INFUSION","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SK-500II","frecuencia":12,"requiere_mp":true,"meses_programados":["MAYO"],"area":"UCI"},{"serie":"EZ-10011006","placa":"12291","nombre":"BOMBA DE INFUSION","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SK-500II","frecuencia":12,"requiere_mp":true,"meses_programados":["MAYO"],"area":"UCI"},{"serie":"EZ-10010907","placa":"12292","nombre":"BOMBA DE INFUSION","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SK-500II","frecuencia":12,"requiere_mp":true,"meses_programados":["MAYO"],"area":"UCI"},{"serie":"2526","placa":"13067","nombre":"ARCO EN C","ubicacion":"CIRUGIA","marca":"SIEMENS","modelo":"ARCADIC ORBIC 3D","frecuencia":6,"requiere_mp":true,"meses_programados":["ENERO","JULIO"],"area":"CIRUGIA"},{"serie":"1111225640","placa":"12149","nombre":"ARMONICO","ubicacion":"QUIROFANO Nº 2","marca":"ETHICON","modelo":"GEN11","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"20250816805203","placa":"15137","nombre":"ARMONICO","ubicacion":"QUIROFANO Nº 2","marca":"ETHICON","modelo":"ADS100","frecuencia":6,"requiere_mp":true,"meses_programados":["OCTUBRE"],"area":"CIRUGIA"},{"serie":"402WA01017","placa":"5327","nombre":"BÁSCULA","ubicacion":"CIRUGIA","marca":"HEALTH O METER","modelo":"402KL","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"CIRUGIA"},{"serie":"CC-8A106277","placa":"6344","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"CIRUGIA","marca":"MINDRAY","modelo":"MEC 1200","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"KN-73006368","placa":"10622","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"CIRUGIA","marca":"MINDRAY","modelo":"UMEC 10","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"DZ1807260031","placa":"11886","nombre":"ELECTROBISTURI","ubicacion":"QUIROFANO Nº 1","marca":"BOVIE","modelo":"A-1250-S","frecuencia":6,"requiere_mp":true,"meses_programados":["MARZO","SEPTIEMBRE"],"area":"CIRUGIA"},{"serie":"DZ1807260035","placa":"11889","nombre":"ELECTROBISTURI","ubicacion":"QUIROFANO Nº 2","marca":"BOVIE","modelo":"A-1250-S","frecuencia":6,"requiere_mp":true,"meses_programados":["MARZO","SEPTIEMBRE"],"area":"CIRUGIA"},{"serie":"DZ1807260041","placa":"11888","nombre":"ELECTROBISTURI","ubicacion":"QUIROFANO Nº 5","marca":"BOVIE","modelo":"A-1250-S","frecuencia":6,"requiere_mp":true,"meses_programados":["MARZO","SEPTIEMBRE"],"area":"CIRUGIA"},{"serie":"DZ1912280066","placa":"12480","nombre":"ELECTROBISTURI","ubicacion":"QUIROFANO Nº 4","marca":"BOVIE","modelo":"A-1250-S","frecuencia":6,"requiere_mp":true,"meses_programados":["MARZO","SEPTIEMBRE"],"area":"CIRUGIA"},{"serie":"BV1124005","placa":"nan","nombre":"ELECTROBISTURI","ubicacion":"CIRUGIA QX1","marca":"BOVIE","modelo":"D30-1","frecuencia":6,"requiere_mp":true,"meses_programados":["OCTUBRE"],"area":"CIRUGIA"},{"serie":"GB-33073805","placa":"nan","nombre":"VENTILADOR","ubicacion":"CIRUGIA","marca":"MINDRAY","modelo":"SV-300","frecuencia":0,"requiere_mp":true,"meses_programados":[],"area":"CIRUGIA"},{"serie":"N/A","placa":"11080","nombre":"LARINGOSCOPIO","ubicacion":"QUIROFANO Nº 1","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"CIRUGIA"},{"serie":"N/A","placa":"11081","nombre":"LARINGOSCOPIO","ubicacion":"QUIROFANO Nº 2","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"CIRUGIA"},{"serie":"N/A","placa":"11082","nombre":"LARINGOSCOPIO","ubicacion":"QUIROFANO Nº 5","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"CIRUGIA"},{"serie":"N/A","placa":"11083","nombre":"LARINGOSCOPIO","ubicacion":"QUIROFANO Nº 4","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"CIRUGIA"},{"serie":"SRN1905300034","placa":"12386","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 1","marca":"PENLON","modelo":"PRIMA SP3","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"SRN1905300046","placa":"12387","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 2","marca":"PENLON","modelo":"PRIMA SP3","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"SRN1905300050","placa":"12388","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 5","marca":"PENLON","modelo":"PRIMA SP3","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"SRN1905300025","placa":"12389","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 4","marca":"PENLON","modelo":"PRIMA SP3","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"MX240201","placa":"15110","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 1","marca":"MINDRAY","modelo":"A9","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"MX240202","placa":"15111","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 2","marca":"MINDRAY","modelo":"A9","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"MX240203","placa":"15112","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 3","marca":"MINDRAY","modelo":"A9","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"MX240204","placa":"15113","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 4","marca":"MINDRAY","modelo":"A9","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"MX240205","placa":"15114","nombre":"MAQUINA DE ANESTESIA","ubicacion":"QUIROFANO Nº 5","marca":"MINDRAY","modelo":"A9","frecuencia":6,"requiere_mp":true,"meses_programados":["JUNIO","DICIEMBRE"],"area":"CIRUGIA"},{"serie":"SB-C002416","placa":"10901","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"SALA DE RECUPERACION","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"SB-C002417","placa":"10902","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"SALA DE RECUPERACION","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"SB-C002418","placa":"10903","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"SALA DE RECUPERACION","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"SB-C002419","placa":"10904","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"SALA DE RECUPERACION","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"SB-C002420","placa":"10905","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"SALA DE RECUPERACION","marca":"MINDRAY","modelo":"BENEVIEW T5","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"CIRUGIA"},{"serie":"EW-03064700","placa":"13251","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-55018528","placa":"7914","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-03064445","placa":"13058","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-03064444","placa":"13057","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-03064448","placa":"13059","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-39005618","placa":"5209","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-39005621","placa":"6764","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"CC-39126222","placa":"5104","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"MEC 1200","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-52016211","placa":"7907","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"EW-03064448","placa":"13059","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"IMEC 8","frecuencia":6,"requiere_mp":true,"meses_programados":["ABRIL","OCTUBRE"],"area":"URGENCIAS"},{"serie":"1600013728","placa":"7563","nombre":"BASCULA","ubicacion":"TRIAGE","marca":"HEALTH O METER","modelo":"160 GK","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"1600013823","placa":"7565","nombre":"BASCULA","ubicacion":"TRIAGE","marca":"HEALTH O METER","modelo":"160 GK","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"1600008361","placa":"1878","nombre":"BÁSCULA","ubicacion":"TRIAGE","marca":"HEALTH O METER","modelo":"MECÁNICA","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"4020101779","placa":"3555","nombre":"BÁSCULA","ubicacion":"TRIAGE","marca":"HEALTH O METER","modelo":"402KL","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"KM220023073","placa":"13058","nombre":"DESFIBRILADOR","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["FEBRERO","AGOSTO"],"area":"URGENCIAS"},{"serie":"KM220023074","placa":"13059","nombre":"DESFIBRILADOR","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"BENEHEART D3","frecuencia":6,"requiere_mp":true,"meses_programados":["FEBRERO","AGOSTO"],"area":"URGENCIAS"},{"serie":"IQ2050025","placa":"13751","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"URGENCIAS","marca":"EDAN","modelo":"SE-1515","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"IQ2050024","placa":"13752","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"URGENCIAS","marca":"EDAN","modelo":"SE-1515","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"HM220524052","placa":"13753","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"URGENCIAS","marca":"EDAN","modelo":"SE-3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"HM220524053","placa":"13754","nombre":"ELECTROCARDIÓGRAFO","ubicacion":"URGENCIAS","marca":"EDAN","modelo":"SE-3","frecuencia":6,"requiere_mp":true,"meses_programados":["MAYO","NOVIEMBRE"],"area":"URGENCIAS"},{"serie":"N/A","placa":"11084","nombre":"LARINGOSCOPIO","ubicacion":"URGENCIAS","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"URGENCIAS"},{"serie":"N/A","placa":"11085","nombre":"LARINGOSCOPIO","ubicacion":"URGENCIAS","marca":"VCRAFT","modelo":"VL1","frecuencia":12,"requiere_mp":true,"meses_programados":["ABRIL"],"area":"URGENCIAS"}];
+
+const RAW_NO_MP = [{"serie":"NT","placa":"4512","nombre":"CENTRAL DE MONITOREO","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"HYPERVISOR IV","area":"UCI"},{"serie":"31438","placa":"4450","nombre":"DIGITALIZADOR","ubicacion":"UCI ADULTOS","marca":"AGFA","modelo":"CR30","area":"UCI"},{"serie":"FB-55009804","placa":"#N/A","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T1","area":"UCI"},{"serie":"FB26000819","placa":"5183","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T1","area":"UCI"},{"serie":"FB26000821","placa":"N.T.","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T1","area":"UCI"},{"serie":"FB26000820","placa":"N.T.","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T1","area":"UCI"},{"serie":"FB26000816","placa":"5179","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"BENEVIEW T1","area":"UCI"},{"serie":"CTA23048182","placa":"0","nombre":"MONITOR DE SIGNOS VITALES","ubicacion":"UCI ADULTOS","marca":"PENLON","modelo":"SPM5","area":"UCI"},{"serie":"GB-33073804","placa":"nan","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","area":"UCI"},{"serie":"GB-25054001","placa":"nan","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","area":"UCI"},{"serie":"GB-25024002","placa":"nan","nombre":"VENTILADOR","ubicacion":"UCI ADULTOS","marca":"MINDRAY","modelo":"SV-300","area":"UCI"},{"serie":"95M57505","placa":"11887","nombre":"AUTOCLAVE","ubicacion":"CIRUGIA","marca":"CASTLE","modelo":"3533D","area":"CIRUGIA"},{"serie":"DZ2120260001","placa":"13799","nombre":"ARTROSCOPIO","ubicacion":"QUIROFANO Nº 1","marca":"ARTHREX","modelo":"AR-6475","area":"CIRUGIA"},{"serie":"NT","placa":"4512","nombre":"CENTRAL DE MONITOREO","ubicacion":"CIRUGIA","marca":"MINDRAY","modelo":"HYPERVISOR IV","area":"CIRUGIA"},{"serie":"NT","placa":"4512","nombre":"CENTRAL DE MONITOREO","ubicacion":"URGENCIAS","marca":"MINDRAY","modelo":"HYPERVISOR IV","area":"URGENCIAS"}];
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let equipos = RAW_MP.map((e,i) => ({...e, id: i, ultimoMant: null, proximoMant: null, realizado: false}));
+let equiposSinMP = RAW_NO_MP.map((e,i) => ({...e, id: i}));
+
+let currentPage = 'dashboard';
+let equipFilter = { area: 'TODOS', status: 'TODOS', search: '' };
+let calFilterArea = 'TODOS';
+let sinMpFilterArea = 'TODOS';
+let currentAreaPage = 'UCI';
+let tablePage = 1;
+const PER_PAGE = 20;
+let editingId = null;
+
+Chart.defaults.color = '#8fa3c0';
+Chart.defaults.font.family = 'DM Sans';
+
+// ═══════════════════════════════════════════════════════════
+// STATUS CALCULATION
+// ═══════════════════════════════════════════════════════════
+function getEquipoStatus(eq) {
+  const meses = eq.meses_programados || [];
+  if (!meses.length) return 'sin_prog';
+  
+  // Check if any scheduled month this year is past and has been done, or upcoming
+  const futureMeses = meses.filter(m => MONTH_NUM[m] >= CUR_MONTH);
+  const pastMeses = meses.filter(m => MONTH_NUM[m] < CUR_MONTH);
+  
+  if (futureMeses.length > 0) {
+    const nextMonth = Math.min(...futureMeses.map(m => MONTH_NUM[m]));
+    const daysUntil = (nextMonth - CUR_MONTH) * 30;
+    if (daysUntil <= 30) return 'proximo';
+    return 'vigente';
+  }
+  
+  if (pastMeses.length > 0 && !eq.realizado) {
+    return 'vencido';
+  }
+  
+  return 'vigente';
+}
+
+function getNextMaint(eq) {
+  const meses = eq.meses_programados || [];
+  if (!meses.length) return null;
+  const future = meses.filter(m => MONTH_NUM[m] >= CUR_MONTH);
+  if (future.length) {
+    const m = future.reduce((a,b) => MONTH_NUM[a] < MONTH_NUM[b] ? a : b);
+    return `${m} ${CUR_YEAR}`;
+  }
+  const next = meses.reduce((a,b) => MONTH_NUM[a] < MONTH_NUM[b] ? a : b);
+  return `${next} ${CUR_YEAR + 1}`;
+}
+
+function statusLabel(s) {
+  const map = { vigente:'Vigente', proximo:'Próx. a vencer', vencido:'Vencido', sin_prog:'Sin programar' };
+  return map[s] || s;
+}
+function statusClass(s) {
+  const map = { vigente:'status-vigente', proximo:'status-proximo', vencido:'status-vencido', sin_prog:'status-sin-prog' };
+  return map[s] || '';
+}
+function areaClass(a) {
+  const map = { UCI:'area-uci', CIRUGIA:'area-cirugia', URGENCIAS:'area-urgencias' };
+  return map[a] || '';
+}
+function areaLabel(a) {
+  const map = { UCI:'UCI', CIRUGIA:'Cirugía', URGENCIAS:'Urgencias' };
+  return map[a] || a;
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  
+  const page = document.getElementById('page-' + name);
+  if (page) page.classList.add('active');
+  currentPage = name;
+
+  const titles = { dashboard:'Dashboard', equipos:'Equipos con Mantenimiento', calendario:'Calendario de Mantenimientos', importar:'Importar desde Excel', sin_mp:'📁 Equipos sin Mantenimiento Preventivo' };
+  document.getElementById('page-title').textContent = titles[name] || name;
+
+  if (name === 'equipos') { equipFilter = { area:'TODOS', status:'TODOS', search:'' }; tablePage=1; renderEquiposTable(); }
+  if (name === 'calendario') renderCalendar();
+  if (name === 'sin_mp') renderSinMP();
+
+  document.getElementById('search-input').value = '';
+}
+
+function showAreaPage(area) {
+  currentAreaPage = area;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-area').classList.add('active');
+  const labels = { UCI:'🏥 UCI', CIRUGIA:'🔪 Cirugía', URGENCIAS:'🚑 Urgencias' };
+  document.getElementById('page-title').textContent = labels[area];
+  equipFilter = { area, status:'TODOS', search:'' };
+  renderAreaTable();
+}
+
+// ═══════════════════════════════════════════════════════════
+// KPI & DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function calcKPIs() {
+  const statuses = equipos.map(e => getEquipoStatus(e));
+  const total = equipos.length;
+  const vigente = statuses.filter(s => s === 'vigente').length;
+  const proximo = statuses.filter(s => s === 'proximo').length;
+  const vencido = statuses.filter(s => s === 'vencido').length;
+  const sinProg = statuses.filter(s => s === 'sin_prog').length;
+  const cumplimiento = total ? Math.round(((vigente + proximo) / total) * 100) : 0;
+
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-total-sub').textContent = `${equiposSinMP.length} sin MP en carpeta aparte`;
+  document.getElementById('kpi-vigente').textContent = vigente;
+  document.getElementById('kpi-proximo').textContent = proximo;
+  document.getElementById('kpi-vencido').textContent = vencido;
+  document.getElementById('kpi-sin-prog').textContent = sinProg;
+  document.getElementById('kpi-cumplimiento').textContent = cumplimiento + '%';
+  document.getElementById('kpi-cumplimiento-sub').textContent = `${vigente + proximo} de ${total} equipos`;
+
+  // Badge
+  document.getElementById('badge-vencidos').textContent = vencido;
+
+  // Area stats
+  for (const area of ['UCI','CIRUGIA','URGENCIAS']) {
+    const areaEqs = equipos.filter(e => e.area === area);
+    const areaVencidos = areaEqs.filter(e => getEquipoStatus(e) === 'vencido').length;
+    const areaVigentes = areaEqs.filter(e => ['vigente','proximo'].includes(getEquipoStatus(e))).length;
+    const perc = areaEqs.length ? Math.round((areaVigentes / areaEqs.length) * 100) : 0;
+
+    const key = area === 'CIRUGIA' ? 'cir' : area === 'URGENCIAS' ? 'urg' : 'uci';
+    document.getElementById(`stat-${key}-total`).textContent = areaEqs.length;
+    document.getElementById(`stat-${key}-vencidos`).textContent = areaVencidos;
+    const prog = document.getElementById(`prog-${key}`);
+    prog.style.width = perc + '%';
+    prog.className = 'progress-fill ' + (perc > 70 ? 'green' : perc > 40 ? 'yellow' : 'red');
+  }
+
+  renderAlerts(vencido, proximo, sinProg);
+  renderCharts(statuses, total);
+}
+
+function renderAlerts(vencido, proximo, sinProg) {
+  const list = document.getElementById('alerts-list');
+  const items = [];
+  if (vencido > 0) items.push(`<div class="alert-item danger" onclick="showPage('equipos');filterStatus('vencido')"><span class="alert-dot"></span><span><strong>${vencido} equipos vencidos</strong> — Requieren mantenimiento urgente</span><span class="alert-count">${vencido}</span></div>`);
+  if (proximo > 0) items.push(`<div class="alert-item warning" onclick="showPage('equipos');filterStatus('proximo')"><span class="alert-dot"></span><span><strong>${proximo} equipos</strong> próximos a vencer (30 días)</span><span class="alert-count">${proximo}</span></div>`);
+  if (sinProg > 0) items.push(`<div class="alert-item info" onclick="showPage('equipos');filterStatus('sin_prog')"><span class="alert-dot"></span><span><strong>${sinProg} equipos</strong> sin fecha de mantenimiento</span><span class="alert-count">${sinProg}</span></div>`);
+  if (!items.length) items.push(`<div class="alert-item info"><span class="alert-dot"></span><span>✅ Todos los mantenimientos están al día</span></div>`);
+  list.innerHTML = items.join('');
+}
+
+let chartEstado, chartMeses, chartFrecuencia;
+function renderCharts(statuses, total) {
+  const ctx1 = document.getElementById('chartEstado').getContext('2d');
+  const ctx2 = document.getElementById('chartMeses').getContext('2d');
+  const ctx3 = document.getElementById('chartFrecuencia').getContext('2d');
+
+  if (chartEstado) chartEstado.destroy();
+  if (chartMeses) chartMeses.destroy();
+  if (chartFrecuencia) chartFrecuencia.destroy();
+
+  const uciEqs = equipos.filter(e => e.area === 'UCI');
+  const cirEqs = equipos.filter(e => e.area === 'CIRUGIA');
+  const urgEqs = equipos.filter(e => e.area === 'URGENCIAS');
+
+  chartEstado = new Chart(ctx1, {
+    type: 'doughnut',
+    data: {
+      labels: ['UCI', 'Cirugía', 'Urgencias'],
+      datasets: [{
+        data: [uciEqs.length, cirEqs.length, urgEqs.length],
+        backgroundColor: ['rgba(92,107,192,0.8)','rgba(38,198,218,0.8)','rgba(239,83,80,0.8)'],
+        borderColor: ['#5c6bc0','#26c6da','#ef5350'],
+        borderWidth: 2
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#8fa3c0', padding:12, font:{size:12} } } } }
+  });
+
+  const monthCounts = MONTHS.map(m => equipos.filter(e => e.meses_programados.includes(m)).length);
+  chartMeses = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => m.substring(0,3)),
+      datasets: [{
+        label: 'Mantenimientos',
+        data: monthCounts,
+        backgroundColor: monthCounts.map((_,i) => i+1 === CUR_MONTH ? 'rgba(0,230,118,0.6)' : 'rgba(0,212,255,0.4)'),
+        borderColor: monthCounts.map((_,i) => i+1 === CUR_MONTH ? '#00e676' : '#00d4ff'),
+        borderWidth: 1.5, borderRadius: 4
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales: {
+        x:{ grid:{color:'rgba(42,58,85,0.5)'} },
+        y:{ grid:{color:'rgba(42,58,85,0.5)'}, beginAtZero:true, ticks:{stepSize:5} }
+      }
+    }
+  });
+
+  const freq6 = equipos.filter(e => e.frecuencia === 6).length;
+  const freq12 = equipos.filter(e => e.frecuencia === 12).length;
+  const freqOther = equipos.filter(e => e.frecuencia !== 6 && e.frecuencia !== 12).length;
+  chartFrecuencia = new Chart(ctx3, {
+    type: 'pie',
+    data: {
+      labels: ['Semestral (6m)', 'Anual (12m)', 'Otra'],
+      datasets: [{
+        data: [freq6, freq12, freqOther],
+        backgroundColor: ['rgba(0,212,255,0.7)','rgba(171,71,188,0.7)','rgba(255,215,64,0.7)'],
+        borderColor: ['#00d4ff','#ab47bc','#ffd740'],
+        borderWidth: 2
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ color:'#8fa3c0', padding:12, font:{size:12} } } } }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// EQUIPOS TABLE
+// ═══════════════════════════════════════════════════════════
+function getFilteredEquipos(pool) {
+  pool = pool || equipos;
+  let result = pool;
+  if (equipFilter.area !== 'TODOS') result = result.filter(e => e.area === equipFilter.area);
+  if (equipFilter.status !== 'TODOS') result = result.filter(e => getEquipoStatus(e) === equipFilter.status);
+  if (equipFilter.search) {
+    const s = equipFilter.search.toLowerCase();
+    result = result.filter(e => e.nombre.toLowerCase().includes(s) || e.placa.toLowerCase().includes(s) || e.serie.toLowerCase().includes(s) || (e.ubicacion||'').toLowerCase().includes(s));
+  }
+  return result;
+}
+
+function renderEquiposTable() {
+  const filtered = getFilteredEquipos();
+  document.getElementById('equip-count').textContent = filtered.length + ' equipos';
+  const start = (tablePage-1) * PER_PAGE;
+  const page = filtered.slice(start, start + PER_PAGE);
+  
+  document.getElementById('equip-tbody').innerHTML = page.map(eq => {
+    const st = getEquipoStatus(eq);
+    const next = getNextMaint(eq);
+    return `<tr onclick="openEquipoDetail(${eq.id})">
+      <td><strong>${eq.nombre}</strong></td>
+      <td>${eq.placa}</td>
+      <td style="color:var(--text3);font-size:11px">${eq.serie}</td>
+      <td><span class="area-badge ${areaClass(eq.area)}">${areaLabel(eq.area)}</span></td>
+      <td>${eq.ubicacion}</td>
+      <td><span style="font-weight:500">${eq.marca}</span><br><span style="font-size:11px;color:var(--text3)">${eq.modelo}</span></td>
+      <td style="font-size:12px">${next || '—'}</td>
+      <td><span class="status-badge ${statusClass(st)}">${statusLabel(st)}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success" style="font-size:11px;padding:4px 8px" onclick="markDone(${eq.id})">✅</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 8px" onclick="openEditModal(${eq.id})">✏️</button>
+          <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="deleteEquipo(${eq.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">No se encontraron equipos</td></tr>';
+
+  renderPagination(filtered.length);
+}
+
+function renderPagination(total) {
+  const pages = Math.ceil(total / PER_PAGE);
+  const pag = document.getElementById('pagination');
+  if (pages <= 1) { pag.innerHTML = ''; return; }
+  let html = `<span class="page-info">Página ${tablePage} de ${pages}</span>`;
+  html += `<button class="page-btn" onclick="gotoPage(${tablePage-1})" ${tablePage===1?'disabled':''}>‹</button>`;
+  for (let i=1; i<=pages; i++) {
+    if (i===1 || i===pages || Math.abs(i-tablePage)<=1) {
+      html += `<button class="page-btn ${i===tablePage?'active':''}" onclick="gotoPage(${i})">${i}</button>`;
+    } else if (Math.abs(i-tablePage)===2) html += '<span style="color:var(--text3)">…</span>';
+  }
+  html += `<button class="page-btn" onclick="gotoPage(${tablePage+1})" ${tablePage===pages?'disabled':''}>›</button>`;
+  pag.innerHTML = html;
+}
+
+function gotoPage(p) { tablePage = Math.max(1, p); renderEquiposTable(); }
+
+function renderAreaTable() {
+  const filtered = getFilteredEquipos(equipos.filter(e => e.area === currentAreaPage));
+  document.getElementById('area-equip-count').textContent = filtered.length + ' equipos';
+  document.getElementById('area-tbody').innerHTML = filtered.map(eq => {
+    const st = getEquipoStatus(eq);
+    const next = getNextMaint(eq);
+    const freqLabel = eq.frecuencia === 6 ? 'Semestral' : eq.frecuencia === 12 ? 'Anual' : eq.frecuencia ? `${eq.frecuencia}m` : '—';
+    return `<tr onclick="openEquipoDetail(${eq.id})">
+      <td><strong>${eq.nombre}</strong></td>
+      <td>${eq.placa}</td>
+      <td style="color:var(--text3);font-size:11px">${eq.serie}</td>
+      <td>${eq.ubicacion}</td>
+      <td><span style="font-weight:500">${eq.marca}</span><br><span style="font-size:11px;color:var(--text3)">${eq.modelo}</span></td>
+      <td style="font-size:12px">${next || '—'}</td>
+      <td><span style="font-size:12px;color:var(--text2)">${freqLabel}</span></td>
+      <td><span class="status-badge ${statusClass(st)}">${statusLabel(st)}</span></td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-success" style="font-size:11px;padding:4px 8px" onclick="markDone(${eq.id})">✅</button>
+          <button class="btn btn-outline" style="font-size:11px;padding:4px 8px" onclick="openEditModal(${eq.id})">✏️</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">No se encontraron equipos</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════
+function filterArea(area, btn) {
+  equipFilter.area = area;
+  tablePage = 1;
+  document.querySelectorAll('#page-equipos .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderEquiposTable();
+}
+
+function filterStatus(status, btn) {
+  equipFilter.status = status;
+  tablePage = 1;
+  if (btn) {
+    const parent = btn.closest('.equip-filters');
+    parent.querySelectorAll('.filter-btn').forEach(b => {
+      if (['TODOS','vigente','proximo','vencido','sin_prog'].includes(b.getAttribute('onclick')?.match(/'(\w+)'/)?.[1])) b.classList.remove('active');
+    });
+    btn.classList.add('active');
+  }
+  if (currentPage === 'area') renderAreaTable();
+  else renderEquiposTable();
+}
+
+function filterCalArea(area, btn) {
+  calFilterArea = area;
+  document.querySelectorAll('#page-calendario .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCalendar();
+}
+
+function filterSinMpArea(area, btn) {
+  sinMpFilterArea = area;
+  document.querySelectorAll('#page-sin_mp .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderSinMP();
+}
+
+function searchEquipment(val) {
+  equipFilter.search = val;
+  tablePage = 1;
+  if (currentPage === 'equipos') renderEquiposTable();
+  else if (currentPage === 'area') renderAreaTable();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════
+function renderCalendar() {
+  const pool = calFilterArea === 'TODOS' ? equipos : equipos.filter(e => e.area === calFilterArea);
+  const areaColors = { UCI:'#5c6bc0', CIRUGIA:'#26c6da', URGENCIAS:'#ef5350' };
+  
+  document.getElementById('calendar-grid').innerHTML = MONTHS.map((m, i) => {
+    const monthNum = i + 1;
+    const monthEqs = pool.filter(e => e.meses_programados.includes(m));
+    const isCurrent = monthNum === CUR_MONTH;
+    const isPast = monthNum < CUR_MONTH;
+    
+    const byArea = {};
+    monthEqs.forEach(e => { byArea[e.area] = (byArea[e.area]||0) + 1; });
+    
+    const tags = Object.entries(byArea).map(([area, count]) => 
+      `<span class="cal-tag" style="background:${areaColors[area]}22;color:${areaColors[area]};border:1px solid ${areaColors[area]}44">${areaLabel(area)}: ${count}</span>`
+    ).join('');
+    
+    const countColor = monthEqs.length === 0 ? 'var(--text3)' : isPast ? 'var(--red)' : isCurrent ? 'var(--green)' : 'var(--accent)';
+    
+    return `<div class="cal-month ${isCurrent?'current-month':''}" onclick="showMonthDetail('${m}')">
+      <div class="cal-month-name">${m}${isCurrent?' ◉':''}</div>
+      <div class="cal-count" style="color:${countColor}">${monthEqs.length}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">equipos programados</div>
+      <div class="cal-tags">${tags}</div>
+      ${isPast && monthEqs.length ? '<div style="font-size:10px;color:var(--red);margin-top:6px">⚠ Verificar</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function showMonthDetail(mes) {
+  const pool = calFilterArea === 'TODOS' ? equipos : equipos.filter(e => e.area === calFilterArea);
+  const monthEqs = pool.filter(e => e.meses_programados.includes(mes));
+  const areaColors = { UCI:'var(--uci)', CIRUGIA:'var(--cir)', URGENCIAS:'var(--urg)' };
+  
+  document.getElementById('modal-equipo-title').textContent = `📅 ${mes} — ${monthEqs.length} mantenimientos`;
+  document.getElementById('modal-equipo-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${monthEqs.map(eq => `
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="closeModal('modal-equipo');openEquipoDetail(${eq.id})">
+          <span class="area-badge ${areaClass(eq.area)}">${areaLabel(eq.area)}</span>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${eq.nombre}</div>
+            <div style="font-size:11px;color:var(--text3)">${eq.marca} ${eq.modelo} · Placa: ${eq.placa}</div>
+          </div>
+          <span class="status-badge ${statusClass(getEquipoStatus(eq))}">${statusLabel(getEquipoStatus(eq))}</span>
+        </div>
+      `).join('') || '<div style="text-align:center;padding:30px;color:var(--text3)">No hay mantenimientos programados este mes</div>'}
+    </div>`;
+  document.getElementById('modal-equipo-footer').innerHTML = `<button class="btn btn-outline" onclick="closeModal('modal-equipo')">Cerrar</button>`;
+  openModal('modal-equipo');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIN MP
+// ═══════════════════════════════════════════════════════════
+function renderSinMP() {
+  const pool = sinMpFilterArea === 'TODOS' ? equiposSinMP : equiposSinMP.filter(e => e.area === sinMpFilterArea);
+  document.getElementById('sin-mp-count').textContent = pool.length + ' equipos';
+  document.getElementById('sin-mp-tbody').innerHTML = pool.map(eq => `
+    <tr>
+      <td><strong>${eq.nombre}</strong></td>
+      <td>${eq.placa}</td>
+      <td style="color:var(--text3);font-size:11px">${eq.serie}</td>
+      <td><span class="area-badge ${areaClass(eq.area)}">${areaLabel(eq.area)}</span></td>
+      <td>${eq.ubicacion}</td>
+      <td>${eq.marca}</td>
+      <td>${eq.modelo}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">No hay equipos</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════
+// EQUIPO DETAIL MODAL
+// ═══════════════════════════════════════════════════════════
+function openEquipoDetail(id) {
+  const eq = equipos.find(e => e.id === id);
+  if (!eq) return;
+  const st = getEquipoStatus(eq);
+  const next = getNextMaint(eq);
+  const freqLabel = eq.frecuencia === 6 ? 'Semestral (6 meses)' : eq.frecuencia === 12 ? 'Anual (12 meses)' : eq.frecuencia ? `Cada ${eq.frecuencia} meses` : 'No definida';
+
+  document.getElementById('modal-equipo-title').textContent = eq.nombre;
+  document.getElementById('modal-equipo-body').innerHTML = `
+    <div style="margin-bottom:14px">
+      <span class="status-badge ${statusClass(st)}" style="font-size:13px;padding:5px 14px">${statusLabel(st)}</span>
+      <span class="area-badge ${areaClass(eq.area)}" style="margin-left:8px;font-size:12px;padding:4px 12px">${areaLabel(eq.area)}</span>
+    </div>
+    <div class="equip-detail-grid">
+      <div class="detail-field"><div class="detail-field-label">Placa</div><div class="detail-field-value">${eq.placa}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Serie</div><div class="detail-field-value">${eq.serie}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Marca</div><div class="detail-field-value">${eq.marca}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Modelo</div><div class="detail-field-value">${eq.modelo}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Ubicación</div><div class="detail-field-value">${eq.ubicacion}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Frecuencia</div><div class="detail-field-value">${freqLabel}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Último Mantenimiento</div><div class="detail-field-value">${eq.ultimoMant || '—'}</div></div>
+      <div class="detail-field"><div class="detail-field-label">Próximo Mantenimiento</div><div class="detail-field-value" style="color:var(--accent)">${next || '—'}</div></div>
+    </div>
+    <div style="margin-top:16px">
+      <div class="detail-field-label" style="margin-bottom:8px">Cronograma 2026</div>
+      <div class="month-schedule">
+        ${MONTHS.map(m => {
+          const isScheduled = eq.meses_programados.includes(m);
+          const isCurrent = MONTH_NUM[m] === CUR_MONTH;
+          return `<span class="month-pill ${isScheduled ? (isCurrent ? 'current-m' : 'scheduled') : ''}">${m.substring(0,3)}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  
+  document.getElementById('modal-equipo-footer').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('modal-equipo')">Cerrar</button>
+    <button class="btn btn-outline" onclick="closeModal('modal-equipo');openEditModal(${id})">✏️ Editar</button>
+    <button class="btn btn-success" onclick="markDone(${id});closeModal('modal-equipo')">✅ Marcar Realizado</button>`;
+  openModal('modal-equipo');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADD / EDIT
+// ═══════════════════════════════════════════════════════════
+function buildMonthChecks(selected) {
+  return MONTHS.map(m => `
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text2)">
+      <input type="checkbox" value="${m}" ${selected.includes(m)?'checked':''} style="accent-color:var(--accent)"> ${m}
+    </label>`).join('');
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-add-title').textContent = 'Agregar Equipo';
+  ['nombre','placa','serie','ubicacion','marca','modelo'].forEach(f => document.getElementById('f-'+f).value = '');
+  document.getElementById('f-area').value = 'UCI';
+  document.getElementById('f-frecuencia').value = '6';
+  document.getElementById('f-requiere').value = 'true';
+  document.getElementById('f-ultimo').value = '';
+  document.getElementById('f-meses-checks').innerHTML = buildMonthChecks([]);
+  openModal('modal-add');
+}
+
+function openEditModal(id) {
+  const eq = equipos.find(e => e.id === id);
+  if (!eq) return;
+  editingId = id;
+  document.getElementById('modal-add-title').textContent = 'Editar Equipo';
+  document.getElementById('f-nombre').value = eq.nombre;
+  document.getElementById('f-placa').value = eq.placa;
+  document.getElementById('f-serie').value = eq.serie;
+  document.getElementById('f-area').value = eq.area;
+  document.getElementById('f-ubicacion').value = eq.ubicacion;
+  document.getElementById('f-marca').value = eq.marca;
+  document.getElementById('f-modelo').value = eq.modelo;
+  document.getElementById('f-frecuencia').value = eq.frecuencia || 6;
+  document.getElementById('f-requiere').value = eq.requiere_mp ? 'true' : 'false';
+  document.getElementById('f-ultimo').value = eq.ultimoMant || '';
+  document.getElementById('f-meses-checks').innerHTML = buildMonthChecks(eq.meses_programados || []);
+  openModal('modal-add');
+}
+
+function saveEquipo() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+  
+  const meses = [...document.querySelectorAll('#f-meses-checks input:checked')].map(c => c.value);
+  const freq = parseInt(document.getElementById('f-frecuencia').value);
+  const requiere = document.getElementById('f-requiere').value === 'true';
+  const ultimo = document.getElementById('f-ultimo').value;
+  
+  // Calculate next maintenance
+  let proximoMant = null;
+  if (ultimo && freq) {
+    const d = new Date(ultimo);
+    d.setMonth(d.getMonth() + freq);
+    proximoMant = d.toISOString().split('T')[0];
+  }
+
+  const data = {
+    nombre: nombre.toUpperCase(),
+    placa: document.getElementById('f-placa').value.trim(),
+    serie: document.getElementById('f-serie').value.trim(),
+    area: document.getElementById('f-area').value,
+    ubicacion: document.getElementById('f-ubicacion').value.trim(),
+    marca: document.getElementById('f-marca').value.trim(),
+    modelo: document.getElementById('f-modelo').value.trim(),
+    frecuencia: freq,
+    requiere_mp: requiere,
+    meses_programados: meses,
+    ultimoMant: ultimo || null,
+    proximoMant
+  };
+
+  if (editingId !== null) {
+    const idx = equipos.findIndex(e => e.id === editingId);
+    equipos[idx] = { ...equipos[idx], ...data };
+    showToast('Equipo actualizado exitosamente', 'success');
+  } else {
+    data.id = Date.now();
+    if (requiere) equipos.push(data);
+    else { equiposSinMP.push(data); }
+    showToast('Equipo agregado exitosamente', 'success');
+  }
+  
+  closeModal('modal-add');
+  calcKPIs();
+  if (currentPage === 'equipos') renderEquiposTable();
+  if (currentPage === 'area') renderAreaTable();
+  if (currentPage === 'sin_mp') renderSinMP();
+}
+
+function markDone(id) {
+  const eq = equipos.find(e => e.id === id);
+  if (!eq) return;
+  const today = new Date().toISOString().split('T')[0];
+  eq.ultimoMant = today;
+  eq.realizado = true;
+  const freq = eq.frecuencia || 6;
+  const d = new Date();
+  d.setMonth(d.getMonth() + freq);
+  eq.proximoMant = d.toISOString().split('T')[0];
+  
+  // Update meses_programados for next year
+  const nextMonth = d.getMonth() + 1;
+  const nextMonthName = MONTHS[nextMonth - 1];
+  if (!eq.meses_programados.includes(nextMonthName)) {
+    eq.meses_programados = [nextMonthName];
+    if (freq === 6) {
+      const m2 = (nextMonth + 6 - 1) % 12;
+      eq.meses_programados.push(MONTHS[m2]);
+    }
+  }
+  
+  showToast(`✅ Mantenimiento de ${eq.nombre} marcado como realizado. Próximo: ${d.toLocaleDateString('es-CO', {month:'long', year:'numeric'})}`, 'success');
+  calcKPIs();
+  if (currentPage === 'equipos') renderEquiposTable();
+  if (currentPage === 'area') renderAreaTable();
+}
+
+function deleteEquipo(id) {
+  if (!confirm('¿Está seguro de eliminar este equipo?')) return;
+  equipos = equipos.filter(e => e.id !== id);
+  calcKPIs();
+  renderEquiposTable();
+  showToast('Equipo eliminado', 'error');
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ═══════════════════════════════════════════════════════════
+function importExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      let added = 0;
+      wb.SheetNames.forEach(sheetName => {
+        const ws = wb.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(ws, { header:1 });
+        if (data.length < 2) return;
+        const headers = data[0].map(h => String(h||'').trim().toUpperCase());
+        const nameIdx = headers.findIndex(h => h.includes('NOMBRE'));
+        const placaIdx = headers.findIndex(h => h.includes('PLACA'));
+        const serieIdx = headers.findIndex(h => h.includes('SERIE'));
+        const ubIdx = headers.findIndex(h => h.includes('UBICACI'));
+        const marcaIdx = headers.findIndex(h => h.includes('MARCA'));
+        const modeloIdx = headers.findIndex(h => h.includes('MODELO'));
+        const freqIdx = headers.findIndex(h => h.includes('FRECUENCIA'));
+        if (nameIdx < 0) return;
+        
+        const area = sheetName.toUpperCase().includes('UCI') ? 'UCI' : sheetName.toUpperCase().includes('CIRUG') ? 'CIRUGIA' : 'URGENCIAS';
+        const months_idx = MONTHS.map(m => ({ m, idx: headers.findIndex(h => h.includes(m)) }));
+        
+        for (let i=1; i<data.length; i++) {
+          const row = data[i];
+          const nombre = String(row[nameIdx]||'').trim();
+          if (!nombre) continue;
+          const meses = months_idx.filter(({m,idx}) => idx>=0 && String(row[idx]||'').toLowerCase().trim() === 'x').map(({m}) => m);
+          equipos.push({
+            id: Date.now() + i, nombre: nombre.toUpperCase(),
+            placa: String(row[placaIdx]||''), serie: String(row[serieIdx]||''),
+            area, ubicacion: String(row[ubIdx]||''), marca: String(row[marcaIdx]||''),
+            modelo: String(row[modeloIdx]||''), frecuencia: parseInt(row[freqIdx])||6,
+            requiere_mp: true, meses_programados: meses, ultimoMant: null, proximoMant: null
+          });
+          added++;
+        }
+      });
+      document.getElementById('import-result').innerHTML = `<div class="alert-item info"><span class="alert-dot"></span>✅ Se importaron <strong>${added} equipos</strong> correctamente.</div>`;
+      calcKPIs();
+      showToast(`${added} equipos importados`, 'success');
+    } catch(err) {
+      document.getElementById('import-result').innerHTML = `<div class="alert-item danger"><span class="alert-dot"></span>Error al leer el archivo: ${err.message}</div>`;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function exportReport() {
+  const wb = XLSX.utils.book_new();
+  
+  const allData = equipos.map(eq => ({
+    'NOMBRE': eq.nombre, 'PLACA': eq.placa, 'SERIE': eq.serie, 'ÁREA': areaLabel(eq.area),
+    'UBICACIÓN': eq.ubicacion, 'MARCA': eq.marca, 'MODELO': eq.modelo,
+    'FRECUENCIA (meses)': eq.frecuencia,
+    'MESES PROGRAMADOS': (eq.meses_programados||[]).join(', '),
+    'ÚLTIMO MANT.': eq.ultimoMant || '—',
+    'PRÓXIMO MANT.': getNextMaint(eq) || '—',
+    'ESTADO': statusLabel(getEquipoStatus(eq))
+  }));
+  
+  const ws = XLSX.utils.json_to_sheet(allData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Equipos con MP');
+  
+  const noMpData = equiposSinMP.map(eq => ({
+    'NOMBRE': eq.nombre, 'PLACA': eq.placa, 'SERIE': eq.serie, 'ÁREA': areaLabel(eq.area),
+    'UBICACIÓN': eq.ubicacion, 'MARCA': eq.marca, 'MODELO': eq.modelo
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(noMpData);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Sin Mantenimiento');
+  
+  XLSX.writeFile(wb, `Reporte_BioMed_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Reporte exportado exitosamente', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODAL UTILS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) closeModal(m.id); });
+});
+
+// ═══════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════
+function showToast(msg, type='info') {
+  const t = document.getElementById('toasts');
+  const icon = type==='success' ? '✅' : type==='error' ? '🗑️' : 'ℹ️';
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  t.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='0.3s'; setTimeout(()=>el.remove(), 300); }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+function init() {
+  document.getElementById('last-update').textContent = 'Actualizado: hoy';
+  calcKPIs();
+  
+  // Month checkboxes for add form
+  document.getElementById('f-meses-checks').innerHTML = buildMonthChecks([]);
+}
+
+init();
+</script>
+</body>
+</html>

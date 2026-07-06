@@ -3,109 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gestión Biomédica</title>
+  <title>BioMed Track — Clínica San Francisco</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <section id="loginScreen" class="login-screen">
-    <form id="loginForm" class="login-box">
-      <div class="brand login-brand">
-        <span class="brand-mark">BM</span>
-        <div>
-          <strong>Fast Biomed</strong>
-          <small>Acceso seguro</small>
-        </div>
-      </div>
-      <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="email" required></label>
-      <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required></label>
-      <button type="submit">Ingresar</button>
-      <p id="loginError" class="form-message"></p>
-      <p class="login-note">Si eres usuario nuevo, solicita las credenciales al administrador.</p>
-    </form>
-  </section>
 
-  <aside class="sidebar app-shell">
-    <div class="brand">
-      <span class="brand-mark">BM</span>
+<!-- ═══ LOGIN ═══ -->
+<section id="loginScreen" class="login-screen">
+  <form id="loginForm" class="login-box">
+    <div class="login-brand">
+      <div class="brand-mark">BM</div>
       <div>
-        <strong>Gestión Biomédica</strong>
-        <small>Mantenimientos preventivos</small>
+        <strong>BioMed Track</strong>
+        <small>Clínica San Francisco</small>
       </div>
     </div>
-    <nav>
-      <button class="nav-btn active" data-view="dashboard">Dashboard</button>
-      <button class="nav-btn" data-view="equipos">Equipos</button>
-      <button class="nav-btn" data-view="calendario">Calendario</button>
-      <button class="nav-btn" data-view="datos">Datos</button>
-    </nav>
-    <div class="area-filter">
-      <span>Áreas</span>
-      <button class="active" data-area="">Todas</button>
-      <button data-area="UCI">UCI</button>
-      <button data-area="Urgencias">Urgencias</button>
-      <button data-area="Cirugia">Cirugía</button>
+    <label>Correo electrónico<input id="loginEmail" type="email" autocomplete="email" required></label>
+    <label>Contraseña<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+    <button type="submit">Ingresar</button>
+    <p id="loginError" class="form-message"></p>
+    <p class="login-note">Si eres usuario nuevo, solicita las credenciales al administrador.</p>
+  </form>
+</section>
+
+<!-- ═══ APP ═══ -->
+<div class="app">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar app-shell">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚕️</div>
+      <h1>BioMed Track</h1>
+      <p>Clínica San Francisco</p>
     </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">General</div>
+      <button class="nav-btn active" data-view="dashboard">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-btn" data-view="equipos">
+        <span class="nav-icon">🔧</span> Equipos
+      </button>
+      <button class="nav-btn" data-view="calendario">
+        <span class="nav-icon">📅</span> Calendario
+      </button>
+      <button class="nav-btn" data-view="datos">
+        <span class="nav-icon">📥</span> Importar datos
+      </button>
+
+      <div class="nav-section-label" style="margin-top:20px">Acceso rápido</div>
+      <button class="nav-btn" id="newEquipment">
+        <span class="nav-icon">➕</span> Nuevo equipo
+      </button>
+      <button class="nav-btn" id="exportExcel">
+        <span class="nav-icon">⬇</span> Exportar Excel
+      </button>
+      <button class="nav-btn" id="exportPdf">
+        <span class="nav-icon">🖨</span> Exportar PDF
+      </button>
+    </nav>
+
+    <div class="area-filter">
+      <span>Área</span>
+      <button class="active" data-area="">Todas las áreas</button>
+      <button data-area="UCI">
+        <span class="area-dot" style="background:var(--uci)"></span> UCI
+      </button>
+      <button data-area="Urgencias">
+        <span class="area-dot" style="background:var(--urg)"></span> Urgencias
+      </button>
+      <button data-area="Cirugia">
+        <span class="area-dot" style="background:var(--cir)"></span> Cirugía
+      </button>
+    </div>
+
     <div class="area-filter sub-area-filter" id="subAreaFilter" hidden>
       <span>Sub-área</span>
       <div id="subAreaButtons"></div>
     </div>
+
+    <div class="sidebar-footer">
+      <div>© 2026 Clínica San Francisco</div>
+      <button class="logout-btn" id="logoutBtn">Cerrar sesión →</button>
+    </div>
   </aside>
 
-  <main class="app-shell">
-    <header class="topbar">
-      <div>
-        <h1 id="pageTitle">Dashboard</h1>
-        <p id="pageSubtitle">Seguimiento automático de mantenimientos preventivos.</p>
-      </div>
-      <div class="actions">
-        <button id="exportExcel" class="secondary">Exportar Excel</button>
-        <button id="exportPdf" class="secondary">Exportar PDF</button>
-        <button id="newEquipment">Nuevo equipo</button>
-        <button id="logoutBtn" class="secondary">Salir</button>
-      </div>
-    </header>
+  <!-- ─── MAIN ─── -->
+  <main class="main app-shell">
 
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+        <div class="topbar-sub" id="pageSubtitle">Indicadores, alertas y estado global del programa.</div>
+      </div>
+      <input class="topbar-search" type="search" id="search" placeholder="🔍  Buscar equipos...">
+    </div>
+
+    <!-- ═══ DASHBOARD ═══ -->
     <section id="dashboard" class="view active">
+
       <div id="dashClock" class="dash-clock">
         <span id="clockTime">--:--:--</span>
         <span id="clockDate">--</span>
       </div>
-      <div class="kpi-grid">
-        <article class="kpi" data-kpi="total"><span>Total equipos</span><strong id="kpiEquipment">0</strong></article>
-        <article class="kpi" data-kpi="scheduled"><span>Programados</span><strong id="kpiScheduled">0</strong></article>
-        <article class="kpi yellow" data-kpi="dueSoon"><span>Próximos<small>en los próximos 30 días</small></span><strong id="kpiDueSoon">0</strong></article>
-        <article class="kpi red" data-kpi="overdue"><span>Vencidos</span><strong id="kpiOverdue">0</strong></article>
-        <article class="kpi green" data-kpi="vigente"><span>Vigente</span><strong id="kpiCompleted">0</strong></article>
 
-        <article class="kpi gray" data-kpi="noSchedule" hidden><span>Sin programar</span><strong id="kpiNoSchedule">0</strong></article>
-        <article class="kpi"><span>Cumplimiento</span><strong id="kpiCompliance">0%</strong></article>
+      <!-- KPI cards -->
+      <div class="kpi-grid">
+        <article class="kpi" data-kpi="total" style="--kpi-color:var(--accent)">
+          <span class="kpi-icon">🏥</span>
+          <div class="kpi-value" id="kpiEquipment">0</div>
+          <div class="kpi-label">Total equipos</div>
+        </article>
+        <article class="kpi" data-kpi="scheduled" style="--kpi-color:#38bdf8">
+          <span class="kpi-icon">📋</span>
+          <div class="kpi-value" id="kpiScheduled">0</div>
+          <div class="kpi-label">Programados</div>
+        </article>
+        <article class="kpi" data-kpi="dueSoon" style="--kpi-color:var(--yellow)">
+          <span class="kpi-icon">⚠️</span>
+          <div class="kpi-value" id="kpiDueSoon">0</div>
+          <div class="kpi-label">Próx. a vencer</div>
+          <div class="kpi-sub">en los próximos 30 días</div>
+        </article>
+        <article class="kpi" data-kpi="overdue" style="--kpi-color:var(--red)">
+          <span class="kpi-icon">🚨</span>
+          <div class="kpi-value" id="kpiOverdue">0</div>
+          <div class="kpi-label">Vencidos</div>
+        </article>
+        <article class="kpi" data-kpi="vigente" style="--kpi-color:var(--green)">
+          <span class="kpi-icon">✅</span>
+          <div class="kpi-value" id="kpiCompleted">0</div>
+          <div class="kpi-label">Vigentes</div>
+        </article>
+        <article class="kpi" data-kpi="noSchedule" style="--kpi-color:#ab47bc" hidden>
+          <span class="kpi-icon">📁</span>
+          <div class="kpi-value" id="kpiNoSchedule">0</div>
+          <div class="kpi-label">Sin programar</div>
+        </article>
+        <article class="kpi" style="--kpi-color:#26c6da">
+          <span class="kpi-icon">📈</span>
+          <div class="kpi-value" id="kpiCompliance">0%</div>
+          <div class="kpi-label">Cumplimiento</div>
+        </article>
       </div>
 
+      <!-- KPI detail expandable -->
       <div id="kpiDetail" class="panel" hidden></div>
 
+      <!-- Area cards -->
+      <div class="area-cards" id="areaCards">
+        <div class="area-card uci" data-area-card="UCI">
+          <div class="area-card-icon">🏥</div>
+          <div class="area-card-name">UCI</div>
+          <div class="area-card-stats" id="areaStatUCI">—</div>
+          <div class="progress-bar"><div class="progress-fill" id="areaProgUCI" style="width:0%"></div></div>
+        </div>
+        <div class="area-card cirugia" data-area-card="Cirugia">
+          <div class="area-card-icon">🔪</div>
+          <div class="area-card-name">Cirugía</div>
+          <div class="area-card-stats" id="areaStatCirugia">—</div>
+          <div class="progress-bar"><div class="progress-fill" id="areaProgCirugia" style="width:0%"></div></div>
+        </div>
+        <div class="area-card urgencias" data-area-card="Urgencias">
+          <div class="area-card-icon">🚑</div>
+          <div class="area-card-name">Urgencias</div>
+          <div class="area-card-stats" id="areaStatUrgencias">—</div>
+          <div class="progress-bar"><div class="progress-fill" id="areaProgUrgencias" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Charts + Alerts -->
       <div class="dashboard-grid">
         <section class="panel">
-          <div class="panel-head">
-            <h2>Estado de mantenimientos</h2>
-          </div>
-          <canvas id="statusChart" height="210"></canvas>
+          <div class="panel-head"><h2>Estado de mantenimientos</h2></div>
+          <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
         </section>
         <section class="panel">
-          <div class="panel-head">
-            <h2>Distribución por área</h2>
-          </div>
-          <canvas id="areaChart" height="210"></canvas>
+          <div class="panel-head"><h2>Distribución por área</h2></div>
+          <div class="chart-wrap"><canvas id="areaChart"></canvas></div>
         </section>
         <section class="panel wide">
           <div class="panel-head">
-            <h2>Alertas automáticas</h2>
+            <h2>🔔 Alertas automáticas</h2>
             <span id="alertCount" class="pill">0 alertas</span>
           </div>
           <div id="alerts" class="alert-list"></div>
         </section>
-        <section id="unscheduledSection" class="panel wide unscheduled-section" hidden>
+        <section id="unscheduledSection" class="panel wide" hidden>
           <div class="panel-head">
-            <h2>Sin programación</h2>
+            <h2>📁 Sin programación</h2>
             <span id="unscheduledCount" class="pill pill-gray">0</span>
           </div>
           <p class="section-hint">Estos equipos no tienen fecha de mantenimiento asignada.</p>
@@ -114,9 +203,9 @@
       </div>
     </section>
 
+    <!-- ═══ EQUIPOS ═══ -->
     <section id="equipos" class="view">
       <div class="toolbar">
-        <input id="search" type="search" placeholder="Buscar por equipo, placa, serie o ubicación">
         <select id="statusFilter">
           <option value="">Todos los estados</option>
           <option>Vigente</option>
@@ -125,12 +214,30 @@
           <option value="Sin programacion">Sin programación</option>
         </select>
       </div>
-      <div id="equipmentList" class="equipment-grid"></div>
+      <div class="panel">
+        <div class="equip-table-wrap">
+          <table class="equip-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Placa</th>
+                <th>Área</th>
+                <th>Ubicación</th>
+                <th>Marca / Modelo</th>
+                <th>Próximo mant.</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="equipmentList"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
+    <!-- ═══ CALENDARIO ═══ -->
     <section id="calendario" class="view">
       <div class="cal-filter-bar">
-        <span>Resaltar en miniaturas:</span>
+        <span>Resaltar:</span>
         <select id="calFilter">
           <option value="all">Todos los equipos</option>
           <option value="Proximo a vencer">Próximos a vencer</option>
@@ -147,68 +254,87 @@
           <button id="nextMonth" class="icon-btn">›</button>
         </div>
         <div class="calendar-weekdays">
-          <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+          <span>Lun</span><span>Mar</span><span>Mié</span>
+          <span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
         </div>
         <div id="calendarGrid" class="calendar-grid"></div>
       </div>
     </section>
 
+    <!-- ═══ DATOS ═══ -->
     <section id="datos" class="view">
       <div class="data-panel">
         <h2>Importar equipos desde Excel o CSV</h2>
         <p>Columnas reconocidas: <strong>NOMBRE, PLACA, SERIE, MARCA, MODELO, UBICACIÓN, ÁREA, REQUIERE MANTENIMIENTO PREVENTIVO, FRECUENCIA MANTENIMIENTO, ENERO…DICIEMBRE</strong>. El archivo puede tener varias hojas (una por área).</p>
-        <input id="importFile" type="file" accept=".csv,.xlsx">
-        <button id="importBtn">Importar archivo</button>
-        <pre id="importResult"></pre>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <input id="importFile" type="file" accept=".csv,.xlsx" style="flex:1;min-width:200px">
+          <button id="importBtn" class="btn btn-primary">Importar archivo</button>
+        </div>
+        <pre id="importResult" style="margin-top:16px"></pre>
       </div>
     </section>
+
   </main>
+</div>
 
-  <dialog id="equipmentDialog">
-    <form id="equipmentForm" method="dialog">
-      <header>
-        <h2 id="formTitle">Nuevo equipo</h2>
-        <button type="button" id="closeDialog" class="icon-btn">×</button>
-      </header>
-      <input type="hidden" id="equipmentId">
-      <div class="form-section-label">Identificación</div>
-      <label>Nombre del equipo<input id="name" required></label>
-      <div class="form-row">
-        <label>Placa<input id="plate" required></label>
-        <label>Número de serie<input id="serial_number" required></label>
-      </div>
-      <div class="form-row">
-        <label>Marca<input id="brand" placeholder="Opcional"></label>
-        <label>Modelo<input id="model" placeholder="Opcional"></label>
-      </div>
-      <div class="form-section-label">Ubicación</div>
-      <div class="form-row">
-        <label>Área<select id="area" required><option>UCI</option><option>Urgencias</option><option value="Cirugia">Cirugía</option></select></label>
-        <label>Ubicación específica<input id="specific_location" placeholder="Ej: Quirófano 2"></label>
-      </div>
-      <label>Ubicación general<input id="location" required placeholder="Sala, servicio o zona"></label>
-      <div class="form-section-label">Mantenimiento</div>
-      <label class="checkbox-label">
-        <input type="checkbox" id="requires_maintenance" checked>
-        Requiere mantenimiento preventivo
+<!-- ═══ DIALOG EQUIPO ═══ -->
+<dialog id="equipmentDialog">
+  <form id="equipmentForm" method="dialog">
+    <header>
+      <h2 id="formTitle">Nuevo equipo</h2>
+      <button type="button" id="closeDialog" class="icon-btn">×</button>
+    </header>
+    <input type="hidden" id="equipmentId">
+    <div class="form-section-label">Identificación</div>
+    <label>Nombre del equipo<input id="name" required></label>
+    <div class="form-row">
+      <label>Placa<input id="plate" required></label>
+      <label>Número de serie<input id="serial_number" required></label>
+    </div>
+    <div class="form-row">
+      <label>Marca<input id="brand" placeholder="Opcional"></label>
+      <label>Modelo<input id="model" placeholder="Opcional"></label>
+    </div>
+    <div class="form-section-label">Ubicación</div>
+    <div class="form-row">
+      <label>Área
+        <select id="area" required>
+          <option>UCI</option>
+          <option>Urgencias</option>
+          <option value="Cirugia">Cirugía</option>
+        </select>
       </label>
-      <div id="maintenanceFields">
-        <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
-        <label>Próximo mantenimiento<input id="next_maintenance" type="date" readonly></label>
-        <label>Frecuencia<select id="frequency_months"><option value="6">Cada 6 meses</option><option value="12">Cada 12 meses</option></select></label>
-      </div>
-      <footer>
-        <button type="button" id="deleteEquipment" class="danger">Eliminar</button>
-        <span></span>
-        <button type="button" id="completeMaintenance" class="secondary">Marcar realizado</button>
-        <button type="submit">Guardar</button>
-      </footer>
-    </form>
-  </dialog>
+      <label>Ubicación específica<input id="specific_location" placeholder="Ej: Quirófano 2"></label>
+    </div>
+    <label>Ubicación general<input id="location" required placeholder="Sala, servicio o zona"></label>
+    <div class="form-section-label">Mantenimiento</div>
+    <label class="checkbox-label">
+      <input type="checkbox" id="requires_maintenance" checked>
+      Requiere mantenimiento preventivo
+    </label>
+    <div id="maintenanceFields">
+      <label>Último mantenimiento<input id="last_maintenance" type="date"></label>
+      <label>Próximo mantenimiento<input id="next_maintenance" type="date" readonly></label>
+      <label>Frecuencia
+        <select id="frequency_months">
+          <option value="6">Cada 6 meses</option>
+          <option value="12">Cada 12 meses</option>
+        </select>
+      </label>
+    </div>
+    <footer>
+      <button type="button" id="deleteEquipment" class="danger">Eliminar</button>
+      <span></span>
+      <button type="button" id="completeMaintenance" class="secondary">Marcar realizado</button>
+      <button type="submit">Guardar</button>
+    </footer>
+  </form>
+</dialog>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="./supabase-config.js"></script>
-  <script src="./app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="./supabase-config.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>

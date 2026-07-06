@@ -353,44 +353,64 @@ function renderDashboard() {
     unscheduledSection.hidden = true;
   }
   drawBarChart($('#statusChart'), data.statusCounts, {
-    'Vigente': '#16803c',
-    'Proximo a vencer': '#fbbf24',
-    'Vencido': '#b42318',
-    'Sin programacion': '#64748b',
+    'Vigente': '#00e676',
+    'Proximo a vencer': '#ffd740',
+    'Vencido': '#ff5252',
+    'Sin programacion': '#5a7090',
   });
   drawBarChart($('#areaChart'), data.areaCounts, {
-    'UCI': '#2563eb',
-    'Urgencias': '#0f766e',
-    'Cirugia': '#7c3aed',
+    'UCI': '#5c6bc0',
+    'Urgencias': '#ef5350',
+    'Cirugia': '#26c6da',
   });
+  renderAreaCards();
   if (state.activeKpi) renderKpiDetail();
 }
 
+const _charts = {};
 function drawBarChart(canvas, values, colors) {
-  const ctx = canvas.getContext('2d');
-  const width = (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || canvas.getAttribute('data-width') || 420;
-  const height = Number(canvas.getAttribute('height'));
-  canvas.width = width * devicePixelRatio;
-  canvas.height = height * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  ctx.clearRect(0, 0, width, height);
-  const entries = Object.entries(values);
-  const max = Math.max(1, ...entries.map(([, value]) => value));
-  const gap = 14;
-  const barWidth = Math.max(28, (width - gap * (entries.length + 1)) / Math.max(entries.length, 1));
-  ctx.font = '12px Segoe UI, Arial';
-  entries.forEach(([label, value], index) => {
-    const x = gap + index * (barWidth + gap);
-    const barHeight = Math.round((height - 60) * value / max);
-    const y = height - 34 - barHeight;
-    ctx.fillStyle = colors[label] || '#2563eb';
-    ctx.fillRect(x, y, barWidth, barHeight);
-    ctx.fillStyle = '#152033';
-    ctx.textAlign = 'center';
-    ctx.fillText(value, x + barWidth / 2, y - 7);
-    ctx.fillStyle = '#637083';
-    const shortLabel = statusLabel(label).replace('Próximo a vencer', 'Próximo').replace('Sin programación', 'Sin prog.');
-    ctx.fillText(shortLabel, x + barWidth / 2, height - 12);
+  const id = canvas.id;
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+  const keys = Object.keys(values);
+  const labels = keys.map(l =>
+    statusLabel(l).replace('Próximo a vencer', 'Próximo').replace('Sin programación', 'Sin prog.')
+  );
+  const data = keys.map(k => values[k]);
+  const bgColors = keys.map(k => (colors[k] || '#00d4ff') + 'bb');
+  const borderColors = keys.map(k => colors[k] || '#00d4ff');
+  _charts[id] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2, borderRadius: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(42,58,85,.5)' }, ticks: { color: '#8fa3c0', font: { size: 11 } } },
+        y: { grid: { color: 'rgba(42,58,85,.5)' }, beginAtZero: true, ticks: { color: '#8fa3c0' } },
+      },
+    },
+  });
+}
+
+function renderAreaCards() {
+  const areaSection = $('#areaCards');
+  if (!areaSection) return;
+  // Ocultar tarjetas de área cuando ya hay un área filtrada activa
+  areaSection.hidden = Boolean(state.area);
+  if (state.area) return;
+  ['UCI', 'Urgencias', 'Cirugia'].forEach(area => {
+    const eq = state.allEquipment.filter(e => e.area === area && e.requires_maintenance !== false);
+    const vencidos = eq.filter(e => e.status === 'Vencido').length;
+    const al_dia = eq.filter(e => e.status === 'Vigente' || e.status === 'Proximo a vencer').length;
+    const total = eq.length;
+    const pct = total ? Math.round((al_dia / total) * 100) : 0;
+    const statEl = $(`#areaStat${area}`);
+    const progEl = $(`#areaProg${area}`);
+    if (statEl) statEl.textContent = `${total} equipos · ${vencidos} vencidos`;
+    if (progEl) {
+      progEl.style.width = pct + '%';
+      progEl.className = 'progress-fill ' + (pct > 70 ? 'green' : pct > 40 ? 'yellow' : 'red');
+    }
   });
 }
 
@@ -403,31 +423,27 @@ function renderEquipment() {
       .toLowerCase()
       .includes(term);
   });
+  if (!items.length) {
+    $('#equipmentList').innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px">No se encontraron equipos con los filtros actuales.</td></tr>`;
+    return;
+  }
   $('#equipmentList').innerHTML = items.map(item => {
-    const locationLine = [areaLabel(item.area), item.specific_location || item.location].filter(Boolean).join(' · ');
-    const brandModel = [item.brand, item.model].filter(Boolean).join(' ');
+    const location = item.specific_location || item.location || '—';
+    const brandModel = [item.brand, item.model].filter(Boolean).join(' / ') || '—';
     const hasMaint = item.requires_maintenance;
-    return `
-    <article class="equipment-card${hasMaint ? '' : ' inventory-only'}" data-id="${item.id}">
-      <div>
-        <h3>${item.name}</h3>
-        <p>${locationLine}</p>
-        ${brandModel ? `<p class="brand-model">${brandModel}</p>` : ''}
-      </div>
-      ${hasMaint ? badge(item.status) : '<span class="status inventory">Solo inventario</span>'}
-      <div class="meta">
-        <span>Placa</span><strong>${item.plate}</strong>
-        <span>Serie</span><strong>${item.serial_number}</strong>
-        ${hasMaint ? `
-        <span>Último</span><strong>${item.last_maintenance || 'Sin registro'}</strong>
-        <span>Próximo</span><strong>${item.next_maintenance || 'Sin programación'}</strong>
-        <span>Frecuencia</span><strong>${item.frequency_months} meses</strong>
-        ` : ''}
-      </div>
-    </article>`;
-  }).join('') || '<p>No se encontraron equipos con los filtros actuales.</p>';
-  $$('.equipment-card').forEach(card => {
-    card.addEventListener('click', () => openEquipment(card.dataset.id));
+    const areaCss = item.area.replace(/\s/g, '');
+    return `<tr data-id="${item.id}" class="${hasMaint ? '' : 'inventory-row'}">
+      <td><strong>${item.name}</strong></td>
+      <td style="color:var(--text2)">${item.plate}</td>
+      <td><span class="area-badge area-${areaCss}">${areaLabel(item.area)}</span></td>
+      <td style="color:var(--text2)">${location}</td>
+      <td style="color:var(--text3)">${brandModel}</td>
+      <td style="color:var(--text2)">${item.next_maintenance || '—'}</td>
+      <td>${hasMaint ? badge(item.status) : '<span class="status inventory">Solo inventario</span>'}</td>
+    </tr>`;
+  }).join('');
+  $$('#equipmentList tr[data-id]').forEach(row => {
+    row.addEventListener('click', () => openEquipment(row.dataset.id));
   });
 }
 
@@ -909,6 +925,18 @@ function wireEvents() {
   });
   $('#exportExcel').addEventListener('click', exportExcel);
   $('#exportPdf').addEventListener('click', exportPdf);
+  // Area cards → filtrar dashboard por área al hacer click
+  $$('[data-area-card]').forEach(card => {
+    card.addEventListener('click', async () => {
+      const area = card.dataset.areaCard;
+      state.area = (state.area === area) ? '' : area;
+      state.subArea = '';
+      $$('.area-filter button').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.area === state.area)
+      );
+      await refresh();
+    });
+  });
   $('#importBtn').addEventListener('click', async () => {
     const file = $('#importFile').files[0];
     if (!file) {
